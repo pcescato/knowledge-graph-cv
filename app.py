@@ -25,10 +25,16 @@ SYSTEM_PROMPT = """You are an expert Knowledge Engineer analyzing professional C
 
 EXTRACTION STRATEGY:
 1. PERSON NODE: Create exactly ONE node for the candidate (use their name from CV)
-2. CORE SKILLS: Extract 6-10 PRIMARY technical skills (frameworks, languages, tools, methodologies)
-3. KEY PROJECTS: Identify 3-5 FLAGSHIP projects with clear business impact
-4. PROFESSIONAL ROLES: Extract 2-4 main positions/companies
-5. EXPERTISE AREAS: Create 2-4 high-level concept nodes (e.g., "Web Performance", "AI Automation", "Migration Engineering")
+2. CORE SKILLS: Extract ALL significant technical skills mentioned (10-15 skills including languages, frameworks, tools)
+   - Include: Programming languages (Python, PHP, JavaScript, etc.)
+   - Include: Frameworks (Astro, Hugo, Django, etc.)
+   - Include: Tools (Docker, PostgreSQL, Git, etc.)
+   - Include: Methodologies (RAG, SSG, CI/CD, etc.)
+3. KEY PROJECTS: Identify ALL significant projects (5-8 projects)
+4. PROFESSIONAL ROLES: Extract all mentioned positions/companies (3-5 roles)
+5. EXPERTISE AREAS: Create 3-5 high-level concept nodes (e.g., "Web Performance", "AI Automation", "Migration Engineering")
+
+CRITICAL: DO NOT artificially limit extraction. If a CV lists 15 skills, extract all 15. Better to have complete information than arbitrary limits.
 
 RELATIONSHIP STRATEGY - CREATE A DENSE GRAPH:
 
@@ -39,7 +45,7 @@ LEVEL 1 - Direct relationships (Person-centric):
 - Role -> AT_COMPANY -> Companies
 
 LEVEL 2 - Cross-connections (Project-centric):
-- Project -> USES -> Multiple Skills (list ALL technologies used in each project)
+- Project -> USES -> Multiple Skills (list ALL technologies used in each project, minimum 3-5 per project)
 - Project -> DEMONSTRATES -> Concepts (what domain expertise it shows)
 - Project -> BUILT_WITH -> Specific tech stack
 
@@ -63,9 +69,10 @@ CRITICAL RULES:
    - Concepts: 6-8
    - Roles/Companies: 4-6
 3. DEDUPLICATION: Use consistent IDs (lowercase, underscores, no spaces)
-4. TARGET: 18-25 nodes for optimal density
-5. TARGET EDGES: Aim for 30-40 relationships (dense graph)
+4. TARGET: 20-30 nodes for comprehensive coverage (NOT a hard limit)
+5. TARGET EDGES: Aim for 40-60 relationships (dense graph)
 6. IDs must be unique and descriptive (e.g., "python_language", not just "python")
+7. COMPLETENESS: Extract ALL mentioned skills, even if briefly mentioned. Better complete than filtered.
 
 DENSE GRAPH EXAMPLE:
 {
@@ -310,22 +317,23 @@ if uploaded_file:
             try:
                 response = model.generate_content([
                     {"mime_type": "application/pdf", "data": file_bytes},
-                    """Extract a DENSE knowledge graph with rich interconnections.
+                    """Extract a COMPREHENSIVE and DENSE knowledge graph with maximum interconnections.
 
-IMPORTANT:
-- Create 18-25 nodes (Person, Skills, Projects, Concepts, Roles)
-- Create 30-40 edges minimum for a well-connected graph
-- For each project, list ALL technologies used (multiple USES relationships)
+CRITICAL INSTRUCTIONS:
+- Extract 20-30 nodes minimum (be exhaustive, not selective)
+- Create 45-60 edges minimum for a richly connected graph
+- For EACH project, list ALL technologies used (minimum 4-5 USES relationships per project)
+- Extract ALL skills mentioned, even briefly (Python, PHP, JavaScript, Docker, Git, etc.)
 - Connect skills that enable each other (ENABLES relationships)
 - Link related projects (RELATED_TO relationships)
 - Connect concepts to multiple projects (IMPLEMENTED_IN)
 
-Focus on creating a network where:
-- Core skills appear in multiple relationships
-- Projects share common technologies
-- Concepts span across multiple projects
+COMPLETENESS OVER BREVITY:
+If the CV mentions PHP, extract it. If it mentions 15 skills, extract all 15.
+Better to have complete information than filtered/curated content.
 
-Quality over quantity, but prioritize DENSITY and INTERCONNECTIONS."""
+Quality over quantity, but PRIORITIZE COMPLETENESS and DENSITY of interconnections.
+Do not artificially limit yourself to "top N" items - extract everything relevant."""
                 ])
                 
                 # Nettoyage de la réponse
@@ -396,17 +404,18 @@ Quality over quantity, but prioritize DENSITY and INTERCONNECTIONS."""
                 # Contrôles d'espacement (nouveauté)
                 # Mapping vers les paramètres de physique
                 spacing_configs = {
-                    "Compact": {"gravity": -5000, "spring": 180},
-                    "Normal": {"gravity": -8000, "spring": 250},
-                    "Large": {"gravity": -12000, "spring": 300},
-                    "Extra Large": {"gravity": -18000, "spring": 400}
+                    "Compact": {"gravity": -8000, "spring": 200},
+                    "Normal": {"gravity": -15000, "spring": 280},
+                    "Large": {"gravity": -20000, "spring": 350},
+                    "Extra Large": {"gravity": -30000, "spring": 450},
+                    "Ultra Wide": {"gravity": -40000, "spring": 550}
                 }
                 
-                with st.expander("⚙️ Espacement des nœuds"):
+                with st.expander("⚙️ Espacement des nœuds", expanded=False):
                     spacing_level = st.select_slider(
                         "Niveau d'espacement",
-                        options=["Compact", "Normal", "Large", "Extra Large"],
-                        value="Large",
+                        options=["Compact", "Normal", "Large", "Extra Large", "Ultra Wide"],
+                        value="Extra Large",  # Défaut augmenté
                         help="Ajuste l'espace entre les nœuds pour éviter les chevauchements"
                     )
                     
@@ -416,7 +425,16 @@ Quality over quantity, but prioritize DENSITY and INTERCONNECTIONS."""
                         help="Masquer les labels peut améliorer la lisibilité"
                     )
                     
-                    st.caption(f"💡 Pour graphes denses, utilisez 'Large' ou 'Extra Large'")
+                    st.caption(f"💡 Pour graphes denses, utilisez 'Extra Large' ou 'Ultra Wide'")
+                
+                st.divider()
+                
+                # Mode debug (nouveauté)
+                debug_mode = st.checkbox(
+                    "🔍 Mode Debug", 
+                    value=False,
+                    help="Affiche les données brutes extraites par Gemini"
+                )
                 
                 st.divider()
                 
@@ -464,6 +482,47 @@ Quality over quantity, but prioritize DENSITY and INTERCONNECTIONS."""
                 
                 st.divider()
                 
+                # Debug info (si activé)
+                if debug_mode:
+                    st.subheader("🔍 Debug Info")
+                    
+                    with st.expander("📊 Statistiques Détaillées", expanded=True):
+                        st.write(f"**Nœuds totaux extraits** : {len(data['nodes'])}")
+                        st.write(f"**Relations totales extraites** : {len(data['edges'])}")
+                        
+                        # Répartition par type
+                        node_types = {}
+                        for node in data['nodes']:
+                            node_type = node['type']
+                            node_types[node_type] = node_types.get(node_type, 0) + 1
+                        
+                        st.write("**Répartition par type** :")
+                        for node_type, count in sorted(node_types.items()):
+                            st.write(f"  - {node_type}: {count}")
+                    
+                    with st.expander("📋 Liste Complète des Nœuds", expanded=False):
+                        for node in sorted(data['nodes'], key=lambda x: x.get('importance', 0), reverse=True):
+                            st.write(f"**{node['label']}** ({node['type']}) - Importance: {node.get('importance', '?')}/10")
+                            st.write(f"  ID: `{node['id']}`")
+                            # Compter les connexions
+                            connections = sum(1 for e in data['edges'] if e['from'] == node['id'] or e['to'] == node['id'])
+                            st.write(f"  Connexions: {connections}")
+                            st.caption("")  # Espacement
+                    
+                    with st.expander("🔗 Liste Complète des Relations", expanded=False):
+                        for edge in data['edges']:
+                            from_node = next((n for n in data['nodes'] if n['id'] == edge['from']), None)
+                            to_node = next((n for n in data['nodes'] if n['id'] == edge['to']), None)
+                            if from_node and to_node:
+                                st.write(f"{from_node['label']} **{edge.get('label', '→')}** {to_node['label']}")
+                    
+                    with st.expander("💻 JSON Brut", expanded=False):
+                        st.json(data)
+                    
+                    st.divider()
+                
+                st.divider()
+                
                 # Légende des couleurs
                 st.subheader("🎨 Légende")
                 color_map = {
@@ -500,8 +559,8 @@ Quality over quantity, but prioritize DENSITY and INTERCONNECTIONS."""
             spacing_params = spacing_configs.get(spacing_level, spacing_configs["Large"])
             
             config = Config(
-                width=1600,
-                height=1000,
+                width=1800,
+                height=1200,
                 directed=True,
                 physics=True,
                 nodeHighlightBehavior=True,
