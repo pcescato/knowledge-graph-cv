@@ -460,9 +460,7 @@ def create_sankey_diagram(data):
             line=dict(color="white", width=2),
             label=node_labels,
             color=node_colors,
-            hovertemplate='%{label}<br>Importance: %{value}<extra></extra>',
-            # Forcer l'affichage des labels
-            align="justify"
+            hovertemplate='%{label}<br>Importance: %{value}<extra></extra>'
         ),
         link=dict(
             source=sources,
@@ -764,14 +762,14 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
                 st.divider()
                 
                 # Contrôles d'espacement (nouveauté)
-                # Mapping vers les paramètres de physique (renforcés pour graphes très denses)
+                # Mapping vers les paramètres de physique (forces ultra-renforcées pour canvas 1600×900)
                 spacing_configs = {
-                    "Compact": {"gravity": -10000, "spring": 250},  # Augmenté
-                    "Normal": {"gravity": -20000, "spring": 350},   # Augmenté
-                    "Large": {"gravity": -30000, "spring": 450},    # Augmenté
-                    "Extra Large": {"gravity": -50000, "spring": 650},  # Augmenté
-                    "Ultra Wide": {"gravity": -70000, "spring": 850},   # Augmenté
-                    "Mega Wide": {"gravity": -100000, "spring": 1100}   # NOUVEAU
+                    "Compact": {"gravity": -15000, "spring": 300},   # Très augmenté
+                    "Normal": {"gravity": -30000, "spring": 450},    # Très augmenté
+                    "Large": {"gravity": -50000, "spring": 600},     # Très augmenté
+                    "Extra Large": {"gravity": -80000, "spring": 800},   # Très augmenté
+                    "Ultra Wide": {"gravity": -120000, "spring": 1100},  # Très augmenté
+                    "Mega Wide": {"gravity": -180000, "spring": 1500}    # Extrême
                 }
                 
                 with st.expander("⚙️ Espacement des nœuds", expanded=False):
@@ -964,8 +962,8 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
             spacing_params = spacing_configs.get(spacing_level, spacing_configs["Large"])
             
             config = Config(
-                width=2500,  # Augmenté de 2000 à 2500
-                height=1600,  # Augmenté de 1400 à 1600
+                width=1600,  # Réduit pour fit tous les écrans
+                height=900,  # Réduit pour fit Full HD (1080p)
                 directed=True,
                 physics=True,
                 nodeHighlightBehavior=True,
