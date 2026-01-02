@@ -10,3 +10,5 @@ dependencies = [
     "streamlit-agraph>=0.0.45",
     "python-dotenv>=1.0.0",
 ]
+[tool.poetry]
+package-mode = false
