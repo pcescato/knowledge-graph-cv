@@ -21,64 +21,107 @@ if "graph_data" not in st.session_state:
 if "focused_node" not in st.session_state:
     st.session_state.focused_node = None
 
-SYSTEM_PROMPT = """You are an expert Knowledge Engineer analyzing professional CVs.
+SYSTEM_PROMPT = """You are an expert Knowledge Engineer analyzing professional CVs to create DENSE, INTERCONNECTED knowledge graphs.
 
 EXTRACTION STRATEGY:
 1. PERSON NODE: Create exactly ONE node for the candidate (use their name from CV)
-2. CORE SKILLS: Extract 5-8 PRIMARY technical skills (frameworks, languages, methodologies)
+2. CORE SKILLS: Extract 6-10 PRIMARY technical skills (frameworks, languages, tools, methodologies)
 3. KEY PROJECTS: Identify 3-5 FLAGSHIP projects with clear business impact
 4. PROFESSIONAL ROLES: Extract 2-4 main positions/companies
-5. EXPERTISE AREAS: Create 2-3 high-level concept nodes (e.g., "Web Performance", "AI Automation")
+5. EXPERTISE AREAS: Create 2-4 high-level concept nodes (e.g., "Web Performance", "AI Automation", "Migration Engineering")
 
-RELATIONSHIP PRIORITIES:
-- Person -> MASTERS -> Core Skills
-- Person -> CREATED -> Key Projects  
-- Projects -> USES -> Skills
-- Projects -> DEMONSTRATES -> Concepts
-- Person -> WORKED_AS -> Roles -> AT_COMPANY -> Companies
+RELATIONSHIP STRATEGY - CREATE A DENSE GRAPH:
+
+LEVEL 1 - Direct relationships (Person-centric):
+- Person -> MASTERS -> Core Skills (for main expertise)
+- Person -> CREATED -> Key Projects
+- Person -> WORKED_AS -> Roles
+- Role -> AT_COMPANY -> Companies
+
+LEVEL 2 - Cross-connections (Project-centric):
+- Project -> USES -> Multiple Skills (list ALL technologies used in each project)
+- Project -> DEMONSTRATES -> Concepts (what domain expertise it shows)
+- Project -> BUILT_WITH -> Specific tech stack
+
+LEVEL 3 - Skill interconnections (create the network effect):
+- Skill -> ENABLES -> Other Skill (e.g., "Python" enables "LLM Integration")
+- Skill -> PART_OF -> Concept (e.g., "Astro" is part of "SSG Ecosystem")
+- Concept -> IMPLEMENTED_IN -> Project
+
+LEVEL 4 - Transversal relationships (the magic):
+- Project -> RELATED_TO -> Project (if they share technologies or concepts)
+- Skill -> REQUIRED_FOR -> Role
+- Concept -> SPANS -> Multiple Projects
 
 CRITICAL RULES:
 1. STRICT JSON OUTPUT (no markdown, no explanations)
 2. IMPORTANCE SCORING:
    - Person: 10
-   - Core Skills: 7-9
-   - Key Projects: 6-8
-   - Concepts: 5-7
+   - Core Skills (used in 2+ projects): 8-9
+   - Secondary Skills (used in 1 project): 6-7
+   - Key Projects: 7-9
+   - Concepts: 6-8
    - Roles/Companies: 4-6
 3. DEDUPLICATION: Use consistent IDs (lowercase, underscores, no spaces)
-4. TARGET: 15-20 nodes maximum for readability
-5. IDs must be unique and descriptive (e.g., "astro_framework", not just "astro")
+4. TARGET: 18-25 nodes for optimal density
+5. TARGET EDGES: Aim for 30-40 relationships (dense graph)
+6. IDs must be unique and descriptive (e.g., "python_language", not just "python")
 
-OUTPUT SCHEMA:
+DENSE GRAPH EXAMPLE:
 {
   "nodes": [
     {"id": "pascal_cescato", "label": "Pascal Cescato", "type": "Person", "importance": 10},
+    {"id": "python_language", "label": "Python", "type": "Skill", "importance": 9},
     {"id": "astro_framework", "label": "Astro", "type": "Skill", "importance": 9},
-    {"id": "wp2md_project", "label": "wp2md Migration Tool", "type": "Project", "importance": 8}
+    {"id": "wp2md_project", "label": "wp2md", "type": "Project", "importance": 8},
+    {"id": "newsletter_engine", "label": "Newsletter Engine", "type": "Project", "importance": 8},
+    {"id": "ai_automation", "label": "AI Automation", "type": "Concept", "importance": 7},
+    {"id": "web_performance", "label": "Web Performance", "type": "Concept", "importance": 7}
   ],
   "edges": [
+    {"from": "pascal_cescato", "to": "python_language", "label": "MASTERS"},
     {"from": "pascal_cescato", "to": "astro_framework", "label": "MASTERS"},
     {"from": "pascal_cescato", "to": "wp2md_project", "label": "CREATED"},
-    {"from": "wp2md_project", "to": "astro_framework", "label": "USES"}
+    {"from": "pascal_cescato", "to": "newsletter_engine", "label": "CREATED"},
+    {"from": "wp2md_project", "to": "python_language", "label": "USES"},
+    {"from": "wp2md_project", "to": "astro_framework", "label": "USES"},
+    {"from": "newsletter_engine", "to": "python_language", "label": "USES"},
+    {"from": "python_language", "to": "ai_automation", "label": "ENABLES"},
+    {"from": "wp2md_project", "to": "web_performance", "label": "DEMONSTRATES"},
+    {"from": "newsletter_engine", "to": "ai_automation", "label": "DEMONSTRATES"},
+    {"from": "wp2md_project", "to": "newsletter_engine", "label": "RELATED_TO"}
   ]
 }
 
 ALLOWED NODE CATEGORIES:
 - "Person": The candidate/author
 - "Role": Job titles or positions
-- "Skill": Technologies, frameworks, or methodologies
+- "Skill": Technologies, frameworks, languages, tools
 - "Project": Specific achievements or work samples
 - "Entity": Companies, schools, or organizations
-- "Concept": High-level domains (e.g., "Web Performance", "AI/ML", "DevOps")
+- "Concept": High-level domains (e.g., "Web Performance", "AI/ML", "Migration Engineering")
 
-ALLOWED RELATIONSHIPS:
+ALLOWED RELATIONSHIPS (expanded for density):
+PRIMARY:
 - "MASTERS" (Person -> Skill)
 - "CREATED" (Person -> Project)
 - "WORKED_AS" (Person -> Role)
 - "AT_COMPANY" (Role -> Entity)
-- "USES" (Project -> Skill)
+
+SECONDARY (CREATE DENSITY):
+- "USES" (Project -> Skill) [Use multiple times per project]
 - "DEMONSTRATES" (Project -> Concept)
-- "REQUIRES" (Role -> Skill)"""
+- "ENABLES" (Skill -> Skill or Concept)
+- "PART_OF" (Skill -> Concept)
+- "RELATED_TO" (Project -> Project)
+- "REQUIRED_FOR" (Skill -> Role)
+- "IMPLEMENTED_IN" (Concept -> Project)
+
+QUALITY CHECK:
+- Minimum 25 edges for a good graph
+- Each project should have 3-5 "USES" relationships
+- Skills used in multiple projects should be highly connected
+- Concepts should span multiple projects"""
 
 model = genai.GenerativeModel('models/gemini-3-flash-preview', system_instruction=SYSTEM_PROMPT)
 
@@ -106,6 +149,8 @@ def validate_and_enhance_graph(data):
     
     # 2. Validation et normalisation des edges
     valid_edges = []
+    edge_set = set()  # Pour éviter les doublons d'edges
+    
     for edge in data['edges']:
         # Remapper les IDs avec normalisation
         edge_from = edge['from'].lower().replace(' ', '_').replace('-', '_')
@@ -121,9 +166,78 @@ def validate_and_enhance_graph(data):
             # Normaliser le label si manquant
             if 'label' not in edge or not edge['label']:
                 edge['label'] = 'RELATES_TO'
-            valid_edges.append(edge)
+            
+            # Éviter les doublons d'edges
+            edge_key = (edge_from, edge_to, edge['label'])
+            if edge_key not in edge_set:
+                edge_set.add(edge_key)
+                valid_edges.append(edge)
     
-    # 3. Calcul des connexions pour ajuster l'importance
+    # 3. Inférence de relations supplémentaires (enrichissement automatique)
+    
+    # 3a. Trouver les projets qui partagent des technologies
+    projects = [n for n in unique_nodes if n['type'] == 'Project']
+    skills = [n for n in unique_nodes if n['type'] == 'Skill']
+    
+    # Créer un mapping project -> skills utilisées
+    project_skills = {}
+    for project in projects:
+        project_skills[project['id']] = set()
+        for edge in valid_edges:
+            if edge['from'] == project['id'] and edge['label'] == 'USES':
+                project_skills[project['id']].add(edge['to'])
+    
+    # Ajouter des relations RELATED_TO entre projets partageant 2+ skills
+    for i, proj1 in enumerate(projects):
+        for proj2 in projects[i+1:]:
+            shared_skills = project_skills[proj1['id']] & project_skills[proj2['id']]
+            if len(shared_skills) >= 2:
+                edge_key = (proj1['id'], proj2['id'], 'RELATED_TO')
+                reverse_key = (proj2['id'], proj1['id'], 'RELATED_TO')
+                if edge_key not in edge_set and reverse_key not in edge_set:
+                    valid_edges.append({
+                        'from': proj1['id'],
+                        'to': proj2['id'],
+                        'label': 'RELATED_TO'
+                    })
+                    edge_set.add(edge_key)
+    
+    # 3b. Connecter les skills fréquemment utilisées aux concepts
+    concepts = [n for n in unique_nodes if n['type'] == 'Concept']
+    for skill in skills:
+        skill_usage_count = sum(1 for e in valid_edges if e['to'] == skill['id'] and e['label'] == 'USES')
+        
+        # Si une skill est utilisée dans 2+ projets, la relier aux concepts pertinents
+        if skill_usage_count >= 2:
+            for concept in concepts:
+                # Heuristique simple basée sur les mots-clés
+                concept_lower = concept['label'].lower()
+                skill_lower = skill['label'].lower()
+                
+                # Exemples de connexions logiques
+                if ('ai' in concept_lower or 'automation' in concept_lower) and \
+                   ('python' in skill_lower or 'llm' in skill_lower or 'gemini' in skill_lower):
+                    edge_key = (skill['id'], concept['id'], 'ENABLES')
+                    if edge_key not in edge_set:
+                        valid_edges.append({
+                            'from': skill['id'],
+                            'to': concept['id'],
+                            'label': 'ENABLES'
+                        })
+                        edge_set.add(edge_key)
+                
+                elif ('performance' in concept_lower or 'web' in concept_lower) and \
+                     ('astro' in skill_lower or 'hugo' in skill_lower or 'ssg' in skill_lower):
+                    edge_key = (skill['id'], concept['id'], 'ENABLES')
+                    if edge_key not in edge_set:
+                        valid_edges.append({
+                            'from': skill['id'],
+                            'to': concept['id'],
+                            'label': 'ENABLES'
+                        })
+                        edge_set.add(edge_key)
+    
+    # 4. Calcul des connexions pour ajuster l'importance
     connections = {nid: 0 for nid in seen_ids}
     for edge in valid_edges:
         connections[edge['from']] += 1
@@ -132,9 +246,9 @@ def validate_and_enhance_graph(data):
     for node in unique_nodes:
         # Boost l'importance des nœuds très connectés
         base_importance = node.get('importance', 5)
-        if connections[node['id']] > 4:
+        if connections[node['id']] >= 5:
             node['importance'] = min(10, base_importance + 2)
-        elif connections[node['id']] > 2:
+        elif connections[node['id']] >= 3:
             node['importance'] = min(10, base_importance + 1)
     
     return {'nodes': unique_nodes, 'edges': valid_edges}
@@ -195,7 +309,22 @@ if uploaded_file:
             try:
                 response = model.generate_content([
                     {"mime_type": "application/pdf", "data": file_bytes},
-                    "Extract the knowledge graph focusing on the most important entities and relationships. Be selective and prioritize quality over quantity."
+                    """Extract a DENSE knowledge graph with rich interconnections.
+
+IMPORTANT:
+- Create 18-25 nodes (Person, Skills, Projects, Concepts, Roles)
+- Create 30-40 edges minimum for a well-connected graph
+- For each project, list ALL technologies used (multiple USES relationships)
+- Connect skills that enable each other (ENABLES relationships)
+- Link related projects (RELATED_TO relationships)
+- Connect concepts to multiple projects (IMPLEMENTED_IN)
+
+Focus on creating a network where:
+- Core skills appear in multiple relationships
+- Projects share common technologies
+- Concepts span across multiple projects
+
+Quality over quantity, but prioritize DENSITY and INTERCONNECTIONS."""
                 ])
                 
                 # Nettoyage de la réponse
@@ -282,6 +411,23 @@ if uploaded_file:
                     st.metric("Nœuds", len(filtered_nodes_data))
                 with col2:
                     st.metric("Relations", len(filtered_edges_data))
+                
+                # Densité du graphe (relations par nœud)
+                if len(filtered_nodes_data) > 0:
+                    density = len(filtered_edges_data) / len(filtered_nodes_data)
+                    st.metric(
+                        "Densité", 
+                        f"{density:.1f}",
+                        help="Nombre moyen de relations par nœud. Un graphe dense a > 1.5"
+                    )
+                    
+                    # Indicateur visuel de qualité
+                    if density >= 2.0:
+                        st.success("🌟 Graphe très interconnecté")
+                    elif density >= 1.5:
+                        st.info("✅ Bonne interconnexion")
+                    else:
+                        st.warning("⚠️ Graphe peu connecté")
                 
                 st.divider()
                 
