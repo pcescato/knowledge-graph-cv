@@ -1,0 +1,8 @@
+README.md
+app.py
+pyproject.toml
+myapp.egg-info/PKG-INFO
+myapp.egg-info/SOURCES.txt
+myapp.egg-info/dependency_links.txt
+myapp.egg-info/requires.txt
+myapp.egg-info/top_level.txt

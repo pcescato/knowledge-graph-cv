@@ -1,0 +1,26 @@
+Metadata-Version: 2.4
+Name: myapp
+Version: 0.1.0
+Summary: Knowledge Graph CV Builder using Gemini
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+Requires-Dist: streamlit>=1.30.0
+Requires-Dist: google-generativeai>=0.3.0
+Requires-Dist: streamlit-agraph>=0.0.45
+Requires-Dist: python-dotenv>=1.0.0
+
+# Python UV Starter
+
+This is a simple Python [uv](https://docs.astral.uv) starter in Firebase Studio.
+
+## Running
+
+```
+uv run main.py
+```
+
+## Add dependencies
+
+```
+uv add ruff
+```
