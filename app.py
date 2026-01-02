@@ -73,25 +73,43 @@ if uploaded_file:
             clean_json = response.text.replace("```json", "").replace("```", "").strip()
             data = json.loads(clean_json)
 
-            # --- 1. BARRE LATÉRALE (Filtres) ---
+            # --- 1. DÉFINITION DE LA CONFIGURATION (INDISPENSABLE ICI) ---
+            config = Config(
+                width=1200,
+                height=800,
+                directed=True, 
+                physics=True,
+                nodeHighlightBehavior=True,
+                highlightColor="#F7A7A7",
+                collapsible=True,
+                physicsOptions={
+                    "forceAtlas2Based": {
+                        "gravitationConstant": -150,
+                        "centralGravity": 0.005,
+                        "springLength": 150,
+                        "springConstant": 0.05,
+                    },
+                    "solver": "forceAtlas2Based",
+                    "stabilization": {"enabled": True, "iterations": 200}
+                }
+            )
+
+            # --- 2. BARRE LATÉRALE ET FILTRAGE ---
             with st.sidebar:
                 st.header("🔍 Filtres")
                 all_types = list(set(n['type'] for n in data['nodes']))
                 selected_types = st.multiselect("Catégories :", all_types, default=all_types)
                 st.divider()
-                details_container = st.empty() # Pour afficher les infos au clic
+                details_container = st.empty()
 
-            # --- 2. FILTRAGE DES DONNÉES ---
             filtered_nodes_data = [n for n in data['nodes'] if n['type'] in selected_types]
             filtered_node_ids = [n['id'] for n in filtered_nodes_data]
-            
-            # On ne garde que les liens dont les deux bouts sont visibles
             filtered_edges_data = [
                 e for e in data['edges'] 
                 if e['from'] in filtered_node_ids and e['to'] in filtered_node_ids
             ]
 
-            # --- 3. CRÉATION DES OBJETS AGRAH ---
+            # --- 3. CRÉATION DES OBJETS ---
             nodes = [Node(id=n['id'], 
                           label=n['label'], 
                           size=n.get('importance', 5)*3 + 10, 
@@ -100,9 +118,8 @@ if uploaded_file:
 
             edges = [Edge(source=e['from'], target=e['to']) for e in filtered_edges_data]
 
-            # --- 4. AFFICHAGE ET CAPTURE DU CLIC ---
+            # --- 4. AFFICHAGE (Le 'config' est maintenant bien défini) ---
             st.success("Graphe généré !")
-            # On stocke le résultat du clic dans 'clicked_node_id'
             clicked_node_id = agraph(nodes=nodes, edges=edges, config=config)
 
             # --- 5. GESTION DU CLIC ---
@@ -116,4 +133,3 @@ if uploaded_file:
 
         except Exception as e:
             st.error(f"Erreur : {e}")
-            st.code(response.text)
