@@ -455,8 +455,8 @@ def create_sankey_diagram(data):
     # Créer le diagramme Sankey
     fig = go.Figure(data=[go.Sankey(
         node=dict(
-            pad=20,  # Augmenté de 15 à 20
-            thickness=25,  # Augmenté de 20 à 25
+            pad=30,  # Augmenté de 20 à 30 (+50% espace entre nœuds)
+            thickness=20,  # Réduit de 25 à 20 (plus fin = plus d'espace)
             line=dict(color="white", width=2),
             label=node_labels,
             color=node_colors,
@@ -486,7 +486,7 @@ def create_sankey_diagram(data):
             family="Verdana, Segoe UI, Noto Sans, sans-serif", 
             color="#000000"
         ),
-        height=1000,
+        height=1200,  # Augmenté de 1000 à 1200 (+20% espace vertical)
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
         margin=dict(l=10, r=10, t=80, b=10)
@@ -774,15 +774,14 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
                 
                 st.divider()
                 
-                # Contrôles d'espacement (nouveauté)
-                # Mapping vers les paramètres de physique (forces ultra-renforcées pour canvas 1600×900)
+                # Contrôles d'espacement (forces ULTRA renforcées pour éviter chevauchement labels)
                 spacing_configs = {
-                    "Compact": {"gravity": -15000, "spring": 300},   # Très augmenté
-                    "Normal": {"gravity": -30000, "spring": 450},    # Très augmenté
-                    "Large": {"gravity": -50000, "spring": 600},     # Très augmenté
-                    "Extra Large": {"gravity": -80000, "spring": 800},   # Très augmenté
-                    "Ultra Wide": {"gravity": -120000, "spring": 1100},  # Très augmenté
-                    "Mega Wide": {"gravity": -180000, "spring": 1500}    # Extrême
+                    "Compact": {"gravity": -20000, "spring": 350},     # Augmenté encore
+                    "Normal": {"gravity": -40000, "spring": 500},      # Augmenté encore
+                    "Large": {"gravity": -70000, "spring": 700},       # Augmenté encore
+                    "Extra Large": {"gravity": -110000, "spring": 950},   # Augmenté encore
+                    "Ultra Wide": {"gravity": -160000, "spring": 1300},   # Augmenté encore
+                    "Mega Wide": {"gravity": -250000, "spring": 1800}     # EXTRÊME pour aucun chevauchement
                 }
                 
                 with st.expander("⚙️ Espacement des nœuds", expanded=False):
