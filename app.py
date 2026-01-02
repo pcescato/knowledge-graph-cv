@@ -5,7 +5,7 @@ import json
 from streamlit_agraph import agraph, Node, Edge, Config
 from dotenv import load_dotenv
 
-# Chargement des variables d'env (.env en local, Secrets sur Cloud Run)
+# Chargement des variables d'env
 load_dotenv()
 api_key = os.getenv("GOOGLE_API_KEY")
 
@@ -15,7 +15,6 @@ if not api_key:
 
 genai.configure(api_key=api_key)
 
-# Ton prompt anglais testé dans AI Studio
 SYSTEM_PROMPT = """You are an expert Knowledge Engineer and Entity Extraction specialist. 
 Your goal is to analyze professional documents (CVs, portfolios, technical articles) and transform them into a structured Knowledge Graph.
 
@@ -59,36 +58,56 @@ model = genai.GenerativeModel('models/gemini-3-flash-preview', system_instructio
 st.set_page_config(layout="wide")
 st.title("🌐 AI Knowledge Graph CV Builder")
 
-uploaded_file = st.file_uploader("Dépose ton CV ou un article (PDF)", type=['pdf'])
+uploaded_file = st.file_uploader("Dépose ton CV (PDF)", type=['pdf'])
 
 if uploaded_file:
     with st.spinner("Analyse par Gemini en cours..."):
-        # Lecture du fichier
         file_bytes = uploaded_file.read()
         
-        # Envoi à Gemini
         response = model.generate_content([
             {"mime_type": "application/pdf", "data": file_bytes},
-            "Extract the knowledge graph from this document."
+            "Extract the knowledge graph. Focus on the 20 most important entities."
         ])
         
         try:
-            # Nettoyage de la réponse au cas où (parfois Gemini met des backticks ```json)
             clean_json = response.text.replace("```json", "").replace("```", "").strip()
             data = json.loads(clean_json)
             
-            # Affichage du graphe
-            nodes = [Node(id=n['id'], label=n['label'], size=n.get('importance', 5)*5, 
+            nodes = [Node(id=n['id'], 
+                          label=n['label'], 
+                          size=n.get('importance', 5)*3 + 10, 
                           color="#00ADEE" if n['type'] == 'Skill' else "#F39C12") 
                      for n in data['nodes']]
-            edges = [Edge(source=e['from'], target=e['to'], label=e['label']) 
+            
+            edges = [Edge(source=e['from'], 
+                          target=e['to'], 
+                          label=e['label']) 
                      for e in data['edges']]
             
-            config = Config(width=1000, height=600, directed=True, nodeHighlightBehavior=True)
+            # Correction de l'indentation ici
+            config = Config(
+                width=1200,
+                height=800,
+                directed=True, 
+                physics=True,
+                nodeHighlightBehavior=True,
+                highlightColor="#F7A7A7",
+                collapsible=True,
+                physicsOptions={
+                    "forceAtlas2Based": {
+                        "gravitationConstant": -150, # Répulsion augmentée pour éviter l'effet "tas"
+                        "centralGravity": 0.005,
+                        "springLength": 150,
+                        "springConstant": 0.05,
+                    },
+                    "solver": "forceAtlas2Based",
+                    "stabilization": {"enabled": True, "iterations": 200}
+                }
+            )           
             
             st.success("Graphe généré !")
             agraph(nodes=nodes, edges=edges, config=config)
             
         except Exception as e:
-            st.error(f"Erreur de parsing : {e}")
+            st.error(f"Erreur : {e}")
             st.code(response.text)
