@@ -9,6 +9,8 @@ dependencies = [
     "google-generativeai>=0.3.0",
     "streamlit-agraph>=0.0.45",
     "python-dotenv>=1.0.0",
+    "plotly==5.18.0",
+    "pandas==2.1.4"
 ]
 [tool.poetry]
 package-mode = false
