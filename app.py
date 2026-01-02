@@ -83,6 +83,28 @@ LEVEL 5 - Technological relationships (CRITICAL FOR ACCURACY):
 IMPORTANT: Add these technological relationships even if not explicitly stated in the CV.
 They are common knowledge relationships that enrich the graph's accuracy.
 
+LEVEL 6 - Bidirectional Concept-Project links (CRITICAL - MOST OFTEN FORGOTTEN):
+For EVERY concept identified, create IMPLEMENTED_IN relationships to ALL relevant projects:
+- Migration Engineering -> IMPLEMENTED_IN -> [all migration-related projects]
+- SSG Ecosystem -> IMPLEMENTED_IN -> [all SSG projects: wp2md, Hugo sites, Astro migrations]
+- AI Automation -> IMPLEMENTED_IN -> [all AI/LLM projects]
+- Web Performance -> IMPLEMENTED_IN -> [all performance-focused projects]
+- Data Engineering -> IMPLEMENTED_IN -> [all data pipeline/database projects]
+
+IMPORTANT EXAMPLES OF BIDIRECTIONAL RELATIONSHIPS (ALWAYS CREATE BOTH):
+✅ wp2md -> DEMONSTRATES -> SSG Ecosystem (project shows concept)
+✅ SSG Ecosystem -> IMPLEMENTED_IN -> wp2md (concept realized in project)
+✅ wp2md -> DEMONSTRATES -> Migration Engineering
+✅ Migration Engineering -> IMPLEMENTED_IN -> wp2md
+✅ Newsletter Engine -> DEMONSTRATES -> AI Automation
+✅ AI Automation -> IMPLEMENTED_IN -> Newsletter Engine
+✅ WordPress to Astro -> DEMONSTRATES -> Web Performance
+✅ Web Performance -> IMPLEMENTED_IN -> WordPress to Astro
+
+ADDITIONAL VALUABLE RELATIONSHIPS:
+- Person -> EXPERTISE_IN -> Concept (for main domains of expertise)
+- Skill -> PART_OF -> Expertise Area (e.g., LLM Integration -> PART_OF -> AI Automation)
+
 CRITICAL RULES:
 1. STRICT JSON OUTPUT (no markdown, no explanations)
 2. IMPORTANCE SCORING:
@@ -94,9 +116,16 @@ CRITICAL RULES:
    - Roles/Companies: 4-6
 3. DEDUPLICATION: Use consistent IDs (lowercase, underscores, no spaces)
 4. TARGET: 20-30 nodes for comprehensive coverage (NOT a hard limit)
-5. TARGET EDGES: Aim for 40-60 relationships (dense graph)
+5. TARGET EDGES: Aim for 60-80 relationships (very dense graph)
 6. IDs must be unique and descriptive (e.g., "python_language", not just "python")
 7. COMPLETENESS: Extract ALL mentioned skills, even if briefly mentioned. Better complete than filtered.
+
+QUALITY CHECK - VERIFY THESE RELATIONSHIPS EXIST:
+- Each concept has 2+ IMPLEMENTED_IN edges to projects
+- Each major project has 1-2 DEMONSTRATES edges to concepts
+- Core technologies have PART_OF relationships to concepts
+- Technologies have ENABLES relationships to related skills
+- Person has EXPERTISE_IN relationships to main concept domains
 
 DENSE GRAPH EXAMPLE:
 {
@@ -138,6 +167,7 @@ PRIMARY:
 - "CREATED" (Person -> Project)
 - "WORKED_AS" (Person -> Role)
 - "AT_COMPANY" (Role -> Entity)
+- "EXPERTISE_IN" (Person -> Concept) - for main domains of expertise
 
 SECONDARY (CREATE DENSITY):
 - "USES" (Project -> Skill) [Use multiple times per project]
@@ -146,17 +176,20 @@ SECONDARY (CREATE DENSITY):
 - "PART_OF" (Skill -> Concept)
 - "RELATED_TO" (Project -> Project)
 - "REQUIRED_FOR" (Skill -> Role)
-- "IMPLEMENTED_IN" (Concept -> Project)
+- "IMPLEMENTED_IN" (Concept -> Project) [CRITICAL: Create for all concepts]
 
 TECHNOLOGICAL (ADD THESE FOR ACCURACY):
 - "REQUIRES" (Technology -> Dependency) - e.g., WordPress REQUIRES PHP
 - "RUNS_ON" (Tool -> Platform) - e.g., Docker RUNS_ON Linux
 - "BUILT_WITH" (Framework -> Language) - e.g., Astro BUILT_WITH JavaScript
 - "ALTERNATIVE_TO" (Technology -> Technology) - e.g., Astro ALTERNATIVE_TO Hugo
+- "SPANS" (Concept -> Concept) - e.g., SEO SPANS Web Performance
 
 QUALITY CHECK:
-- Minimum 50 edges for a comprehensive graph
+- Minimum 60 edges for a comprehensive graph
 - Each project should have 4-6 "USES" relationships
+- Each concept should have 2+ "IMPLEMENTED_IN" relationships
+- Each major project should have 1-2 "DEMONSTRATES" relationships
 - Skills used in multiple projects should be highly connected
 - Concepts should span multiple projects
 - Add technological relationships (PHP-WordPress, Docker-Linux, etc.)"""
@@ -408,16 +441,41 @@ if uploaded_file:
 
 CRITICAL INSTRUCTIONS:
 - Extract 20-30 nodes minimum (be exhaustive, not selective)
-- Create 45-60 edges minimum for a richly connected graph
-- For EACH project, list ALL technologies used (minimum 4-5 USES relationships per project)
+- Create 60-80 edges minimum for a richly connected graph
+- For EACH project, list ALL technologies used (minimum 4-6 USES relationships per project)
 - Extract ALL skills mentioned, even briefly (Python, PHP, JavaScript, Docker, Git, etc.)
 - Connect skills that enable each other (ENABLES relationships)
 - Link related projects (RELATED_TO relationships)
 - Connect concepts to multiple projects (IMPLEMENTED_IN)
 
+BIDIRECTIONAL CONCEPT-PROJECT RELATIONSHIPS (CRITICAL):
+For EVERY concept you identify, create IMPLEMENTED_IN relationships to ALL relevant projects:
+- SSG Ecosystem -> IMPLEMENTED_IN -> [all SSG projects like wp2md, Hugo sites, Astro projects]
+- Migration Engineering -> IMPLEMENTED_IN -> [all migration projects]
+- AI Automation -> IMPLEMENTED_IN -> [all AI/LLM projects]
+- Web Performance -> IMPLEMENTED_IN -> [all performance-focused projects]
+
+IMPORTANT EXAMPLES (ALWAYS CREATE BOTH DIRECTIONS):
+✅ wp2md -> DEMONSTRATES -> SSG Ecosystem
+✅ SSG Ecosystem -> IMPLEMENTED_IN -> wp2md
+✅ Newsletter Engine -> DEMONSTRATES -> AI Automation
+✅ AI Automation -> IMPLEMENTED_IN -> Newsletter Engine
+
+PERSON-CONCEPT EXPERTISE:
+Create EXPERTISE_IN relationships from the person to their main domains:
+- Pascal -> EXPERTISE_IN -> AI Automation
+- Pascal -> EXPERTISE_IN -> Migration Engineering
+- Pascal -> EXPERTISE_IN -> Web Performance
+
 COMPLETENESS OVER BREVITY:
 If the CV mentions PHP, extract it. If it mentions 15 skills, extract all 15.
 Better to have complete information than filtered/curated content.
+
+QUALITY CHECK BEFORE RETURNING:
+✅ Each concept has 2+ IMPLEMENTED_IN edges to projects
+✅ Each major project has 1-2 DEMONSTRATES edges to concepts
+✅ Person has EXPERTISE_IN to main concept domains
+✅ 60+ total relationships
 
 Quality over quantity, but PRIORITIZE COMPLETENESS and DENSITY of interconnections.
 Do not artificially limit yourself to "top N" items - extract everything relevant."""
