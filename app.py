@@ -707,8 +707,8 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
             spacing_params = spacing_configs.get(spacing_level, spacing_configs["Large"])
             
             config = Config(
-                width=1800,
-                height=1200,
+                width=2000,
+                height=1400,
                 directed=True,
                 physics=True,
                 nodeHighlightBehavior=True,
