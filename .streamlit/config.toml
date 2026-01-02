@@ -1,0 +1,8 @@
+[server]
+port = 8080
+enableCORS = false
+enableXsrfProtection = false
+
+[browser]
+serverAddress = "0.0.0.0"
+serverPort = 443
