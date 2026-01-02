@@ -72,42 +72,48 @@ if uploaded_file:
         try:
             clean_json = response.text.replace("```json", "").replace("```", "").strip()
             data = json.loads(clean_json)
+
+            # --- 1. BARRE LATÉRALE (Filtres) ---
+            with st.sidebar:
+                st.header("🔍 Filtres")
+                all_types = list(set(n['type'] for n in data['nodes']))
+                selected_types = st.multiselect("Catégories :", all_types, default=all_types)
+                st.divider()
+                details_container = st.empty() # Pour afficher les infos au clic
+
+            # --- 2. FILTRAGE DES DONNÉES ---
+            filtered_nodes_data = [n for n in data['nodes'] if n['type'] in selected_types]
+            filtered_node_ids = [n['id'] for n in filtered_nodes_data]
             
+            # On ne garde que les liens dont les deux bouts sont visibles
+            filtered_edges_data = [
+                e for e in data['edges'] 
+                if e['from'] in filtered_node_ids and e['to'] in filtered_node_ids
+            ]
+
+            # --- 3. CRÉATION DES OBJETS AGRAH ---
             nodes = [Node(id=n['id'], 
                           label=n['label'], 
                           size=n.get('importance', 5)*3 + 10, 
                           color="#00ADEE" if n['type'] == 'Skill' else "#F39C12") 
-                     for n in data['nodes']]
-            
-            edges = [Edge(source=e['from'], 
-                          target=e['to'], 
-                          label=e['label']) 
-                     for e in data['edges']]
-            
-            # Correction de l'indentation ici
-            config = Config(
-                width=1200,
-                height=800,
-                directed=True, 
-                physics=True,
-                nodeHighlightBehavior=True,
-                highlightColor="#F7A7A7",
-                collapsible=True,
-                physicsOptions={
-                    "forceAtlas2Based": {
-                        "gravitationConstant": -150, # Répulsion augmentée pour éviter l'effet "tas"
-                        "centralGravity": 0.005,
-                        "springLength": 150,
-                        "springConstant": 0.05,
-                    },
-                    "solver": "forceAtlas2Based",
-                    "stabilization": {"enabled": True, "iterations": 200}
-                }
-            )           
-            
+                     for n in filtered_nodes_data]
+
+            edges = [Edge(source=e['from'], target=e['to']) for e in filtered_edges_data]
+
+            # --- 4. AFFICHAGE ET CAPTURE DU CLIC ---
             st.success("Graphe généré !")
-            agraph(nodes=nodes, edges=edges, config=config)
-            
+            # On stocke le résultat du clic dans 'clicked_node_id'
+            clicked_node_id = agraph(nodes=nodes, edges=edges, config=config)
+
+            # --- 5. GESTION DU CLIC ---
+            if clicked_node_id:
+                node_info = next((n for n in data['nodes'] if n['id'] == clicked_node_id), None)
+                if node_info:
+                    with details_container.container():
+                        st.subheader(f"📄 {node_info['label']}")
+                        st.write(f"**Type :** {node_info['type']}")
+                        st.write(f"**Importance :** {node_info.get('importance', '?')}/10")
+
         except Exception as e:
             st.error(f"Erreur : {e}")
             st.code(response.text)
