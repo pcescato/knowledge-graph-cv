@@ -20,6 +20,8 @@ if "graph_data" not in st.session_state:
     st.session_state.graph_data = None
 if "focused_node" not in st.session_state:
     st.session_state.focused_node = None
+if "gemini_model" not in st.session_state:
+    st.session_state.gemini_model = "gemini-3-flash-preview"
 
 SYSTEM_PROMPT = """You are an expert Knowledge Engineer analyzing professional CVs to create DENSE, INTERCONNECTED knowledge graphs.
 
@@ -58,6 +60,28 @@ LEVEL 4 - Transversal relationships (the magic):
 - Project -> RELATED_TO -> Project (if they share technologies or concepts)
 - Skill -> REQUIRED_FOR -> Role
 - Concept -> SPANS -> Multiple Projects
+
+LEVEL 5 - Technological relationships (CRITICAL FOR ACCURACY):
+- Technology Stack Relationships:
+  * PHP -> ENABLES -> WordPress (WordPress is built with PHP)
+  * WordPress -> REQUIRES -> PHP (WordPress needs PHP to run)
+  * Docker -> REQUIRES -> Linux (Docker runs on Linux)
+  * NGINX/Apache -> RUNS_ON -> Linux
+  * PostgreSQL/MySQL -> RUNS_ON -> Linux
+  * Git -> ENABLES -> Collaboration/DevOps
+  
+- Framework/Language Relationships:
+  * Astro/Hugo -> BUILT_WITH -> JavaScript/Go
+  * Python Libraries (lxml, Pillow) -> PART_OF -> Python
+  * SSG Frameworks -> ENABLES -> Web Performance
+  
+- Ecosystem Relationships:
+  * Astro -> ALTERNATIVE_TO -> Hugo (both are SSG)
+  * PostgreSQL -> ALTERNATIVE_TO -> MySQL (both are databases)
+  * NGINX -> ALTERNATIVE_TO -> Apache (both are web servers)
+
+IMPORTANT: Add these technological relationships even if not explicitly stated in the CV.
+They are common knowledge relationships that enrich the graph's accuracy.
 
 CRITICAL RULES:
 1. STRICT JSON OUTPUT (no markdown, no explanations)
@@ -124,11 +148,18 @@ SECONDARY (CREATE DENSITY):
 - "REQUIRED_FOR" (Skill -> Role)
 - "IMPLEMENTED_IN" (Concept -> Project)
 
+TECHNOLOGICAL (ADD THESE FOR ACCURACY):
+- "REQUIRES" (Technology -> Dependency) - e.g., WordPress REQUIRES PHP
+- "RUNS_ON" (Tool -> Platform) - e.g., Docker RUNS_ON Linux
+- "BUILT_WITH" (Framework -> Language) - e.g., Astro BUILT_WITH JavaScript
+- "ALTERNATIVE_TO" (Technology -> Technology) - e.g., Astro ALTERNATIVE_TO Hugo
+
 QUALITY CHECK:
-- Minimum 25 edges for a good graph
-- Each project should have 3-5 "USES" relationships
+- Minimum 50 edges for a comprehensive graph
+- Each project should have 4-6 "USES" relationships
 - Skills used in multiple projects should be highly connected
-- Concepts should span multiple projects"""
+- Concepts should span multiple projects
+- Add technological relationships (PHP-WordPress, Docker-Linux, etc.)"""
 
 model = genai.GenerativeModel('models/gemini-3-flash-preview', system_instruction=SYSTEM_PROMPT)
 
@@ -244,6 +275,58 @@ def validate_and_enhance_graph(data):
                         })
                         edge_set.add(edge_key)
     
+    # 3c. Ajouter des relations technologiques logiques (NOUVEAU V6)
+    # Créer des mappings des nœuds par label (case-insensitive)
+    nodes_by_label = {}
+    for node in unique_nodes:
+        label_lower = node['label'].lower()
+        nodes_by_label[label_lower] = node
+    
+    # Relations technologiques à ajouter automatiquement
+    tech_relationships = [
+        # PHP <-> WordPress
+        ('php', 'wordpress', 'ENABLES'),
+        ('wordpress', 'php', 'REQUIRES'),
+        
+        # Docker <-> Linux
+        ('docker', 'linux', 'RUNS_ON'),
+        
+        # Web servers <-> Linux
+        ('nginx', 'linux', 'RUNS_ON'),
+        ('apache', 'linux', 'RUNS_ON'),
+        
+        # Databases <-> Linux (optionnel)
+        ('postgresql', 'linux', 'RUNS_ON'),
+        ('mysql', 'linux', 'RUNS_ON'),
+        
+        # SSG alternatives
+        ('astro', 'hugo', 'ALTERNATIVE_TO'),
+    ]
+    
+    for skill_a_key, skill_b_key, relationship in tech_relationships:
+        # Chercher les nœuds correspondants (partiel match)
+        skill_a_node = None
+        skill_b_node = None
+        
+        for label, node in nodes_by_label.items():
+            if skill_a_key in label and node['type'] == 'Skill':
+                skill_a_node = node
+            if skill_b_key in label and (node['type'] == 'Skill' or node['type'] == 'Concept'):
+                skill_b_node = node
+        
+        # Si les deux nœuds existent, créer la relation
+        if skill_a_node and skill_b_node:
+            edge_key = (skill_a_node['id'], skill_b_node['id'], relationship)
+            reverse_key = (skill_b_node['id'], skill_a_node['id'], relationship)
+            
+            if edge_key not in edge_set and reverse_key not in edge_set:
+                valid_edges.append({
+                    'from': skill_a_node['id'],
+                    'to': skill_b_node['id'],
+                    'label': relationship
+                })
+                edge_set.add(edge_key)
+    
     # 4. Calcul des connexions pour ajuster l'importance
     connections = {nid: 0 for nid in seen_ids}
     for edge in valid_edges:
@@ -313,6 +396,10 @@ if uploaded_file:
     if st.session_state.graph_data is None:
         with st.spinner("🔍 Analyse par Gemini en cours..."):
             file_bytes = uploaded_file.read()
+            
+            # Utiliser le modèle sélectionné
+            selected_model = st.session_state.get('gemini_model', 'gemini-3-flash-preview')
+            model = genai.GenerativeModel(f'models/{selected_model}', system_instruction=SYSTEM_PROMPT)
             
             try:
                 response = model.generate_content([
@@ -398,6 +485,25 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
                     default=all_types,
                     help="Filtre les nœuds par catégorie"
                 )
+                
+                st.divider()
+                
+                # Sélection du modèle (nouveauté V6)
+                st.subheader("🤖 Modèle IA")
+                gemini_model = st.selectbox(
+                    "Modèle Gemini",
+                    options=["gemini-3-flash-preview", "gemini-3-pro-preview"],
+                    index=0 if st.session_state.gemini_model == "gemini-3-flash-preview" else 1,
+                    help="Flash: rapide, Pro: plus précis et inférences avancées"
+                )
+                
+                # Mettre à jour le modèle si changé
+                if gemini_model != st.session_state.gemini_model:
+                    st.session_state.gemini_model = gemini_model
+                    st.session_state.graph_data = None  # Reset pour forcer nouvelle analyse
+                    st.info("💡 Modèle changé. Uploadez à nouveau votre CV pour réanalyser.")
+                
+                st.caption("💡 Pro recommandé pour graphes plus précis (relations technologiques)")
                 
                 st.divider()
                 
@@ -520,6 +626,48 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
                         st.json(data)
                     
                     st.divider()
+                
+                # Barre de recherche (nouveauté V6)
+                st.subheader("🔎 Recherche de Nœud")
+                search_query = st.text_input(
+                    "Nom du nœud",
+                    placeholder="Ex: PHP, Python, wp2md...",
+                    help="Recherche case-insensitive dans les labels",
+                    key="node_search"
+                )
+                
+                if search_query:
+                    matching_nodes = [
+                        n for n in data['nodes'] 
+                        if search_query.lower() in n['label'].lower()
+                    ]
+                    
+                    if matching_nodes:
+                        st.success(f"✅ {len(matching_nodes)} nœud(s) trouvé(s)")
+                        
+                        for node in matching_nodes:
+                            # Badge avec type et importance
+                            badge = f"{node['type']} • {node.get('importance', '?')}/10"
+                            connections_count = sum(1 for e in data['edges'] if e['from'] == node['id'] or e['to'] == node['id'])
+                            
+                            col1, col2 = st.columns([3, 1])
+                            with col1:
+                                st.write(f"**{node['label']}**")
+                                st.caption(f"{badge} • {connections_count} connexions")
+                            with col2:
+                                if st.button("📍", key=f"focus_{node['id']}", help="Focus sur ce nœud"):
+                                    st.session_state.focused_node = node['id']
+                                    st.rerun()
+                        
+                        # Auto-focus si un seul résultat
+                        if len(matching_nodes) == 1 and st.session_state.focused_node != matching_nodes[0]['id']:
+                            st.info("💡 Cliquez sur 📍 pour activer le focus")
+                    else:
+                        st.warning("❌ Aucun nœud ne correspond")
+                else:
+                    st.caption("💡 Tapez un nom pour rechercher un nœud spécifique")
+                
+                st.divider()
                 
                 st.divider()
                 
