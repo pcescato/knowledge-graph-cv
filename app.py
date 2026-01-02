@@ -384,16 +384,16 @@ def validate_and_enhance_graph(data):
 def calculate_node_size(node_type, importance):
     """Calcule la taille du nœud en fonction du type et de l'importance"""
     base_sizes = {
-        "Person": 70,      # Augmenté de 60 à 70
-        "Skill": 40,       # Augmenté de 35 à 40
-        "Project": 45,     # Augmenté de 40 à 45
-        "Role": 35,        # Augmenté de 30 à 35
-        "Entity": 33,      # Augmenté de 28 à 33
-        "Concept": 37      # Augmenté de 32 à 37
+        "Person": 55,      # Réduit de 70 à 55 (-21%)
+        "Skill": 32,       # Réduit de 40 à 32 (-20%)
+        "Project": 36,     # Réduit de 45 à 36 (-20%)
+        "Role": 28,        # Réduit de 35 à 28 (-20%)
+        "Entity": 26,      # Réduit de 33 à 26 (-21%)
+        "Concept": 30      # Réduit de 37 à 30 (-19%)
     }
-    base = base_sizes.get(node_type, 30)
-    # Augmenter légèrement l'impact de l'importance
-    return base + (importance * 2.5)
+    base = base_sizes.get(node_type, 24)  # Réduit de 30 à 24
+    # Légèrement moins d'impact de l'importance pour garder les bulles compactes
+    return base + (importance * 2.0)  # Réduit de 2.5 à 2.0
 
 def get_connected_nodes(node_id, edges):
     """Retourne tous les nœuds directement connectés à un nœud donné"""
@@ -479,13 +479,26 @@ def create_sankey_diagram(data):
             'text': "Career Flow: Skills → Projects → Expertise",
             'x': 0.5,
             'xanchor': 'center',
-            'font': {'size': 24, 'family': 'Arial Black'}  # Titre plus gros
+            'font': {'size': 24, 'family': 'Verdana, Segoe UI, Noto Sans, sans-serif'}
         },
-        font=dict(size=14, family="Arial Black", color="#000000"),  # Police plus grosse et bold
-        height=1000,  # Augmenté de 900 à 1000
+        font=dict(
+            size=15, 
+            family="Verdana, Segoe UI, Noto Sans, sans-serif", 
+            color="#000000"
+        ),
+        height=1000,
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
-        margin=dict(l=10, r=10, t=80, b=10)  # Marges optimisées
+        margin=dict(l=10, r=10, t=80, b=10)
+    )
+    
+    # Désactiver les effets de bordure/ombre sur les labels
+    fig.update_traces(
+        textfont=dict(
+            family="Verdana, Segoe UI, Noto Sans, sans-serif",
+            size=15,
+            color="#000000"
+        )
     )
     
     return fig
