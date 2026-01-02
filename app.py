@@ -256,15 +256,16 @@ def validate_and_enhance_graph(data):
 def calculate_node_size(node_type, importance):
     """Calcule la taille du nœud en fonction du type et de l'importance"""
     base_sizes = {
-        "Person": 60,
-        "Skill": 35,
-        "Project": 40,
-        "Role": 30,
-        "Entity": 28,
-        "Concept": 32
+        "Person": 70,      # Augmenté de 60 à 70
+        "Skill": 40,       # Augmenté de 35 à 40
+        "Project": 45,     # Augmenté de 40 à 45
+        "Role": 35,        # Augmenté de 30 à 35
+        "Entity": 33,      # Augmenté de 28 à 33
+        "Concept": 37      # Augmenté de 32 à 37
     }
-    base = base_sizes.get(node_type, 25)
-    return base + (importance * 2)
+    base = base_sizes.get(node_type, 30)
+    # Augmenter légèrement l'impact de l'importance
+    return base + (importance * 2.5)
 
 def get_connected_nodes(node_id, edges):
     """Retourne tous les nœuds directement connectés à un nœud donné"""
@@ -351,25 +352,30 @@ Quality over quantity, but prioritize DENSITY and INTERCONNECTIONS."""
         try:
             # --- 1. DÉFINITION DE LA CONFIGURATION ---
             config = Config(
-                width=1400,
-                height=900,
+                width=1600,
+                height=1000,
                 directed=True,
                 physics=True,
                 nodeHighlightBehavior=True,
                 highlightColor="#FFD700",
                 collapsible=True,
                 physicsOptions={
-                    "hierarchicalRepulsion": {
-                        "nodeDistance": 200,
-                        "springLength": 200,
-                        "springConstant": 0.05,
+                    "barnesHut": {
+                        "gravitationalConstant": -8000,  # Force de répulsion très élevée
+                        "centralGravity": 0.1,           # Faible gravité centrale
+                        "springLength": 250,             # Longueur des "ressorts" entre nœuds
+                        "springConstant": 0.02,          # Rigidité des ressorts
+                        "damping": 0.5,                  # Amortissement du mouvement
+                        "avoidOverlap": 1                # Évite les chevauchements
                     },
-                    "solver": "hierarchicalRepulsion",
+                    "solver": "barnesHut",               # Meilleur pour les graphes denses
                     "stabilization": {
                         "enabled": True,
-                        "iterations": 300,
+                        "iterations": 500,               # Plus d'itérations pour convergence
+                        "updateInterval": 25,
                         "fit": True
-                    }
+                    },
+                    "minVelocity": 0.75                  # Vitesse minimale avant arrêt
                 }
             )
 
@@ -384,6 +390,33 @@ Quality over quantity, but prioritize DENSITY and INTERCONNECTIONS."""
                     default=all_types,
                     help="Filtre les nœuds par catégorie"
                 )
+                
+                st.divider()
+                
+                # Contrôles d'espacement (nouveauté)
+                # Mapping vers les paramètres de physique
+                spacing_configs = {
+                    "Compact": {"gravity": -5000, "spring": 180},
+                    "Normal": {"gravity": -8000, "spring": 250},
+                    "Large": {"gravity": -12000, "spring": 300},
+                    "Extra Large": {"gravity": -18000, "spring": 400}
+                }
+                
+                with st.expander("⚙️ Espacement des nœuds"):
+                    spacing_level = st.select_slider(
+                        "Niveau d'espacement",
+                        options=["Compact", "Normal", "Large", "Extra Large"],
+                        value="Large",
+                        help="Ajuste l'espace entre les nœuds pour éviter les chevauchements"
+                    )
+                    
+                    show_edge_labels = st.checkbox(
+                        "Afficher labels des relations", 
+                        value=False,
+                        help="Masquer les labels peut améliorer la lisibilité"
+                    )
+                    
+                    st.caption(f"💡 Pour graphes denses, utilisez 'Large' ou 'Extra Large'")
                 
                 st.divider()
                 
@@ -462,6 +495,38 @@ Quality over quantity, but prioritize DENSITY and INTERCONNECTIONS."""
                 # Container pour les détails au clic
                 details_container = st.empty()
 
+            # --- 1. DÉFINITION DE LA CONFIGURATION (après récupération des paramètres) ---
+            # Récupérer les paramètres d'espacement
+            spacing_params = spacing_configs.get(spacing_level, spacing_configs["Large"])
+            
+            config = Config(
+                width=1600,
+                height=1000,
+                directed=True,
+                physics=True,
+                nodeHighlightBehavior=True,
+                highlightColor="#FFD700",
+                collapsible=True,
+                physicsOptions={
+                    "barnesHut": {
+                        "gravitationalConstant": spacing_params["gravity"],  # Paramètre ajustable
+                        "centralGravity": 0.1,
+                        "springLength": spacing_params["spring"],            # Paramètre ajustable
+                        "springConstant": 0.02,
+                        "damping": 0.5,
+                        "avoidOverlap": 1
+                    },
+                    "solver": "barnesHut",
+                    "stabilization": {
+                        "enabled": True,
+                        "iterations": 500,
+                        "updateInterval": 25,
+                        "fit": True
+                    },
+                    "minVelocity": 0.75
+                }
+            )
+
             # --- 3. CRÉATION DES OBJETS GRAPH ---
             # Déterminer les nœuds et edges actifs si mode focus
             if st.session_state.focused_node:
@@ -502,11 +567,16 @@ Quality over quantity, but prioritize DENSITY and INTERCONNECTIONS."""
                 edge_color = "#95A5A6" if is_active else "#E8E8E8"
                 edge_width = 2 if is_active else 1
                 
+                # Afficher le label seulement si demandé par l'utilisateur ET si l'edge est active
+                edge_label = ''
+                if show_edge_labels and is_active:
+                    edge_label = e.get('label', '')
+                
                 edges.append(
                     Edge(
                         source=e['from'], 
                         target=e['to'],
-                        label=e.get('label', '') if is_active else '',
+                        label=edge_label,
                         color=edge_color
                     )
                 )
