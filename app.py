@@ -15,6 +15,10 @@ if not api_key:
 
 genai.configure(api_key=api_key)
 
+# Initialisation de la mémoire pour éviter de relancer Gemini au clic
+if "graph_data" not in st.session_state:
+    st.session_state.graph_data = None
+
 SYSTEM_PROMPT = """You are an expert Knowledge Engineer and Entity Extraction specialist. 
 Your goal is to analyze professional documents (CVs, portfolios, technical articles) and transform them into a structured Knowledge Graph.
 
@@ -61,19 +65,30 @@ st.title("🌐 AI Knowledge Graph CV Builder")
 uploaded_file = st.file_uploader("Dépose ton CV (PDF)", type=['pdf'])
 
 if uploaded_file:
-    with st.spinner("Analyse par Gemini en cours..."):
-        file_bytes = uploaded_file.read()
-        
-        response = model.generate_content([
-            {"mime_type": "application/pdf", "data": file_bytes},
-            "Extract the knowledge graph. Focus on the 20 most important entities."
-        ])
-        
-        try:
-            clean_json = response.text.replace("```json", "").replace("```", "").strip()
-            data = json.loads(clean_json)
+    # --- PHASE D'ANALYSE (Seulement si pas déjà en mémoire) ---
+    if st.session_state.graph_data is None:
+        with st.spinner("Analyse par Gemini en cours..."):
+            file_bytes = uploaded_file.read()
+            
+            response = model.generate_content([
+                {"mime_type": "application/pdf", "data": file_bytes},
+                "Extract the knowledge graph. Focus on the 20 most important entities."
+            ])
+            
+            try:
+                clean_json = response.text.replace("```json", "").replace("```", "").strip()
+                st.session_state.graph_data = json.loads(clean_json)
+            except Exception as e:
+                st.error(f"Erreur de parsing : {e}")
+                st.code(response.text)
+                st.stop()
 
-            # --- 1. DÉFINITION DE LA CONFIGURATION (INDISPENSABLE ICI) ---
+    # --- PHASE D'AFFICHAGE (Interractive) ---
+    if st.session_state.graph_data:
+        data = st.session_state.graph_data
+
+        try:
+            # --- 1. DÉFINITION DE LA CONFIGURATION ---
             config = Config(
                 width=1200,
                 height=800,
@@ -100,7 +115,7 @@ if uploaded_file:
                 all_types = list(set(n['type'] for n in data['nodes']))
                 selected_types = st.multiselect("Catégories :", all_types, default=all_types)
                 st.divider()
-                details_container = st.empty()
+                details_container = st.empty() # Place pour les infos au clic
 
             filtered_nodes_data = [n for n in data['nodes'] if n['type'] in selected_types]
             filtered_node_ids = [n['id'] for n in filtered_nodes_data]
@@ -118,11 +133,11 @@ if uploaded_file:
 
             edges = [Edge(source=e['from'], target=e['to']) for e in filtered_edges_data]
 
-            # --- 4. AFFICHAGE (Le 'config' est maintenant bien défini) ---
-            st.success("Graphe généré !")
+            # --- 4. AFFICHAGE ---
+            st.success("Graphe prêt ! Clique sur un nœud pour voir les détails.")
             clicked_node_id = agraph(nodes=nodes, edges=edges, config=config)
 
-            # --- 5. GESTION DU CLIC ---
+            # --- 5. GESTION DU CLIC (Affichage en haut de sidebar) ---
             if clicked_node_id:
                 node_info = next((n for n in data['nodes'] if n['id'] == clicked_node_id), None)
                 if node_info:
@@ -132,4 +147,4 @@ if uploaded_file:
                         st.write(f"**Importance :** {node_info.get('importance', '?')}/10")
 
         except Exception as e:
-            st.error(f"Erreur : {e}")
+            st.error(f"Erreur d'affichage : {e}")
