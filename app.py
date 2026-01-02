@@ -13,7 +13,7 @@ load_dotenv()
 api_key = os.getenv("GOOGLE_API_KEY")
 
 if not api_key:
-    st.error("Clé API manquante ! Configurez GOOGLE_API_KEY.")
+    st.error("api key missing ! configure google_api_key.")
     st.stop()
 
 genai.configure(api_key=api_key)
@@ -27,6 +27,24 @@ if "gemini_model" not in st.session_state:
     st.session_state.gemini_model = "gemini-3-flash-preview"
 if "viz_mode" not in st.session_state:
     st.session_state.viz_mode = "Network Graph"
+
+
+
+# Load demo CV by default for Dev.to challenge showcase
+if "demo_loaded" not in st.session_state:
+    st.session_state.demo_loaded = False
+
+if st.session_state.graph_data is None and not st.session_state.demo_loaded:
+    # Load demo CV automatically
+    try:
+        demo_path = os.path.join(os.path.dirname(__file__), "demo_cv_data.json")
+        if os.path.exists(demo_path):
+            with open(demo_path, 'r', encoding='utf-8') as f:
+                st.session_state.graph_data = json.load(f)
+                st.session_state.demo_loaded = True
+                st.info("💡 **Demo Mode**: Pascal Cescato's CV loaded automatically. Upload your own to try it!")
+    except Exception as e:
+        pass  # Si erreur, ignorer silencieusement
 
 SYSTEM_PROMPT = """You are an expert Knowledge Engineer analyzing professional CVs to create DENSE, INTERCONNECTED knowledge graphs.
 
@@ -43,9 +61,9 @@ EXTRACTION STRATEGY:
 
 CRITICAL: DO NOT artificially limit extraction. If a CV lists 15 skills, extract all 15. Better to have complete information than arbitrary limits.
 
-RELATIONSHIP STRATEGY - CREATE A DENSE GRAPH:
+relationshipsHIP STRATEGY - CREATE A DENSE GRAPH:
 
-LEVEL 1 - Direct relationships (Person-centric):
+LEVEL 1 - Direct relationshipships (Person-centric):
 - Person -> MASTERS -> Core Skills (for main expertise)
 - Person -> CREATED -> Key Projects
 - Person -> WORKED_AS -> Roles
@@ -61,13 +79,13 @@ LEVEL 3 - Skill interconnections (create the network effect):
 - Skill -> PART_OF -> Concept (e.g., "Astro" is part of "SSG Ecosystem")
 - Concept -> IMPLEMENTED_IN -> Project
 
-LEVEL 4 - Transversal relationships (the magic):
+LEVEL 4 - Transversal relationshipships (the magic):
 - Project -> RELATED_TO -> Project (if they share technologies or concepts)
 - Skill -> REQUIRED_FOR -> Role
 - Concept -> SPANS -> Multiple Projects
 
-LEVEL 5 - Technological relationships (CRITICAL FOR ACCURACY):
-- Technology Stack Relationships:
+LEVEL 5 - Technological relationshipships (CRITICAL FOR ACCURACY):
+- Technology Stack relationshipships:
   * PHP -> ENABLES -> WordPress (WordPress is built with PHP)
   * WordPress -> REQUIRES -> PHP (WordPress needs PHP to run)
   * Docker -> REQUIRES -> Linux (Docker runs on Linux)
@@ -75,28 +93,28 @@ LEVEL 5 - Technological relationships (CRITICAL FOR ACCURACY):
   * PostgreSQL/MySQL -> RUNS_ON -> Linux
   * Git -> ENABLES -> Collaboration/DevOps
   
-- Framework/Language Relationships:
+- Framework/Language relationshipships:
   * Astro/Hugo -> BUILT_WITH -> JavaScript/Go
   * Python Libraries (lxml, Pillow) -> PART_OF -> Python
   * SSG Frameworks -> ENABLES -> Web Performance
   
-- Ecosystem Relationships:
+- Ecosystem relationshipships:
   * Astro -> ALTERNATIVE_TO -> Hugo (both are SSG)
   * PostgreSQL -> ALTERNATIVE_TO -> MySQL (both are databases)
   * NGINX -> ALTERNATIVE_TO -> Apache (both are web servers)
 
-IMPORTANT: Add these technological relationships even if not explicitly stated in the CV.
-They are common knowledge relationships that enrich the graph's accuracy.
+IMPORTANT: Add these technological relationshipships even if not explicitly stated in the CV.
+They are common knowledge relationshipships that enrich the graph's accuracy.
 
 LEVEL 6 - Bidirectional Concept-Project links (CRITICAL - MOST OFTEN FORGOTTEN):
-For EVERY concept identified, create IMPLEMENTED_IN relationships to ALL relevant projects:
+For EVERY concept identified, create IMPLEMENTED_IN relationshipships to ALL relevant projects:
 - Migration Engineering -> IMPLEMENTED_IN -> [all migration-related projects]
 - SSG Ecosystem -> IMPLEMENTED_IN -> [all SSG projects: wp2md, Hugo sites, Astro migrations]
 - AI Automation -> IMPLEMENTED_IN -> [all AI/LLM projects]
 - Web Performance -> IMPLEMENTED_IN -> [all performance-focused projects]
 - Data Engineering -> IMPLEMENTED_IN -> [all data pipeline/database projects]
 
-IMPORTANT EXAMPLES OF BIDIRECTIONAL RELATIONSHIPS (ALWAYS CREATE BOTH):
+IMPORTANT EXAMPLES OF BIDIRECTIONAL relationshipsHIPS (ALWAYS CREATE BOTH):
 ✅ wp2md -> DEMONSTRATES -> SSG Ecosystem (project shows concept)
 ✅ SSG Ecosystem -> IMPLEMENTED_IN -> wp2md (concept realized in project)
 ✅ wp2md -> DEMONSTRATES -> Migration Engineering
@@ -106,7 +124,7 @@ IMPORTANT EXAMPLES OF BIDIRECTIONAL RELATIONSHIPS (ALWAYS CREATE BOTH):
 ✅ WordPress to Astro -> DEMONSTRATES -> Web Performance
 ✅ Web Performance -> IMPLEMENTED_IN -> WordPress to Astro
 
-ADDITIONAL VALUABLE RELATIONSHIPS:
+ADDITIONAL VALUABLE relationshipsHIPS:
 - Person -> EXPERTISE_IN -> Concept (for main domains of expertise)
 - Skill -> PART_OF -> Expertise Area (e.g., LLM Integration -> PART_OF -> AI Automation)
 
@@ -121,16 +139,16 @@ CRITICAL RULES:
    - Roles/Companies: 4-6
 3. DEDUPLICATION: Use consistent IDs (lowercase, underscores, no spaces)
 4. TARGET: 20-30 nodes for comprehensive coverage (NOT a hard limit)
-5. TARGET EDGES: Aim for 60-80 relationships (very dense graph)
+5. TARGET EDGES: Aim for 60-80 relationshipships (very dense graph)
 6. IDs must be unique and descriptive (e.g., "python_language", not just "python")
 7. COMPLETENESS: Extract ALL mentioned skills, even if briefly mentioned. Better complete than filtered.
 
-QUALITY CHECK - VERIFY THESE RELATIONSHIPS EXIST:
+QUALITY CHECK - VERIFY THESE relationshipsHIPS EXIST:
 - Each concept has 2+ IMPLEMENTED_IN edges to projects
 - Each major project has 1-2 DEMONSTRATES edges to concepts
-- Core technologies have PART_OF relationships to concepts
-- Technologies have ENABLES relationships to related skills
-- Person has EXPERTISE_IN relationships to main concept domains
+- Core technologies have PART_OF relationshipships to concepts
+- Technologies have ENABLES relationshipships to related skills
+- Person has EXPERTISE_IN relationshipships to main concept domains
 
 DENSE GRAPH EXAMPLE:
 {
@@ -166,7 +184,7 @@ ALLOWED NODE CATEGORIES:
 - "Entity": Companies, schools, or organizations
 - "Concept": High-level domains (e.g., "Web Performance", "AI/ML", "Migration Engineering")
 
-ALLOWED RELATIONSHIPS (expanded for density):
+ALLOWED relationshipsHIPS (expanded for density):
 PRIMARY:
 - "MASTERS" (Person -> Skill)
 - "CREATED" (Person -> Project)
@@ -192,19 +210,19 @@ TECHNOLOGICAL (ADD THESE FOR ACCURACY):
 
 QUALITY CHECK:
 - Minimum 60 edges for a comprehensive graph
-- Each project should have 4-6 "USES" relationships
-- Each concept should have 2+ "IMPLEMENTED_IN" relationships
-- Each major project should have 1-2 "DEMONSTRATES" relationships
+- Each project should have 4-6 "USES" relationshipships
+- Each concept should have 2+ "IMPLEMENTED_IN" relationshipships
+- Each major project should have 1-2 "DEMONSTRATES" relationshipships
 - Skills used in multiple projects should be highly connected
 - Concepts should span multiple projects
-- Add technological relationships (PHP-WordPress, Docker-Linux, etc.)"""
+- Add technological relationshipships (PHP-WordPress, Docker-Linux, etc.)"""
 
 model = genai.GenerativeModel('models/gemini-3-flash-preview', system_instruction=SYSTEM_PROMPT)
 
 def validate_and_enhance_graph(data):
     """Nettoie et enrichit le graphe retourné par Gemini"""
     
-    # 1. Déduplication des nœuds
+    # 1. Déduplication des nodes
     seen_ids = set()
     unique_nodes = []
     id_mapping = {}  # Pour remapper les IDs
@@ -249,9 +267,9 @@ def validate_and_enhance_graph(data):
                 edge_set.add(edge_key)
                 valid_edges.append(edge)
     
-    # 3. Inférence de relations supplémentaires (enrichissement automatique)
+    # 3. Inférence de relationships supplémentaires (enrichissement automatique)
     
-    # 3a. Trouver les projets qui partagent des technologies
+    # 3a. Trouver les projects qui partagent des technologies
     projects = [n for n in unique_nodes if n['type'] == 'Project']
     skills = [n for n in unique_nodes if n['type'] == 'Skill']
     
@@ -263,7 +281,7 @@ def validate_and_enhance_graph(data):
             if edge['from'] == project['id'] and edge['label'] == 'USES':
                 project_skills[project['id']].add(edge['to'])
     
-    # Ajouter des relations RELATED_TO entre projets partageant 2+ skills
+    # Ajouter des relationships RELATED_TO entre projects partageant 2+ skills
     for i, proj1 in enumerate(projects):
         for proj2 in projects[i+1:]:
             shared_skills = project_skills[proj1['id']] & project_skills[proj2['id']]
@@ -283,7 +301,7 @@ def validate_and_enhance_graph(data):
     for skill in skills:
         skill_usage_count = sum(1 for e in valid_edges if e['to'] == skill['id'] and e['label'] == 'USES')
         
-        # Si une skill est utilisée dans 2+ projets, la relier aux concepts pertinents
+        # Si une skill est utilisée dans 2+ projects, la relier aux concepts pertinents
         if skill_usage_count >= 2:
             for concept in concepts:
                 # Heuristique simple basée sur les mots-clés
@@ -313,15 +331,15 @@ def validate_and_enhance_graph(data):
                         })
                         edge_set.add(edge_key)
     
-    # 3c. Ajouter des relations technologiques logiques (NOUVEAU V6)
-    # Créer des mappings des nœuds par label (case-insensitive)
+    # 3c. Ajouter des relationships technologiques logiques (NOUVEAU V6)
+    # Créer des mappings des nodes par label (case-insensitive)
     nodes_by_label = {}
     for node in unique_nodes:
         label_lower = node['label'].lower()
         nodes_by_label[label_lower] = node
     
-    # Relations technologiques à ajouter automatiquement
-    tech_relationships = [
+    # relationships technologiques à ajouter automatiquement
+    tech_relationshipships = [
         # PHP <-> WordPress
         ('php', 'wordpress', 'ENABLES'),
         ('wordpress', 'php', 'REQUIRES'),
@@ -341,8 +359,8 @@ def validate_and_enhance_graph(data):
         ('astro', 'hugo', 'ALTERNATIVE_TO'),
     ]
     
-    for skill_a_key, skill_b_key, relationship in tech_relationships:
-        # Chercher les nœuds correspondants (partiel match)
+    for skill_a_key, skill_b_key, relationshipship in tech_relationshipships:
+        # Chercher les nodes correspondants (partiel match)
         skill_a_node = None
         skill_b_node = None
         
@@ -352,16 +370,16 @@ def validate_and_enhance_graph(data):
             if skill_b_key in label and (node['type'] == 'Skill' or node['type'] == 'Concept'):
                 skill_b_node = node
         
-        # Si les deux nœuds existent, créer la relation
+        # Si les deux nodes existent, créer la relation
         if skill_a_node and skill_b_node:
-            edge_key = (skill_a_node['id'], skill_b_node['id'], relationship)
-            reverse_key = (skill_b_node['id'], skill_a_node['id'], relationship)
+            edge_key = (skill_a_node['id'], skill_b_node['id'], relationshipship)
+            reverse_key = (skill_b_node['id'], skill_a_node['id'], relationshipship)
             
             if edge_key not in edge_set and reverse_key not in edge_set:
                 valid_edges.append({
                     'from': skill_a_node['id'],
                     'to': skill_b_node['id'],
-                    'label': relationship
+                    'label': relationshipship
                 })
                 edge_set.add(edge_key)
     
@@ -372,7 +390,7 @@ def validate_and_enhance_graph(data):
         connections[edge['to']] += 1
     
     for node in unique_nodes:
-        # Boost l'importance des nœuds très connectés
+        # Boost l'importance des nodes très connectés
         base_importance = node.get('importance', 5)
         if connections[node['id']] >= 5:
             node['importance'] = min(10, base_importance + 2)
@@ -396,7 +414,7 @@ def calculate_node_size(node_type, importance):
     return base + (importance * 2.0)  # Réduit de 2.5 à 2.0
 
 def get_connected_nodes(node_id, edges):
-    """Retourne tous les nœuds directement connectés à un nœud donné"""
+    """Retourne tous les nodes directement connectés à un nœud donné"""
     connected = set()
     for edge in edges:
         if edge['from'] == node_id:
@@ -416,7 +434,7 @@ def get_relevant_edges(node_id, edges):
 def create_sankey_diagram(data):
     """Crée un diagramme Sankey montrant les flux Person → Skills → Projects → Concepts"""
     
-    # Définir les couleurs par type
+    # Définir colors par type
     color_map = {
         "Person": "rgba(255, 75, 75, 0.8)",
         "Role": "rgba(243, 156, 18, 0.8)",
@@ -429,11 +447,11 @@ def create_sankey_diagram(data):
     # Créer un mapping id -> index
     node_dict = {node['id']: i for i, node in enumerate(data['nodes'])}
     
-    # Préparer les nœuds
+    # Préparer les nodes
     node_labels = [node['label'] for node in data['nodes']]
     node_colors = [color_map.get(node['type'], "rgba(189, 195, 199, 0.8)") for node in data['nodes']]
     
-    # Préparer les liens avec valeurs basées sur l'importance
+    # Préparer les liens avec values basées sur l'importance
     sources = []
     targets = []
     values = []
@@ -444,7 +462,7 @@ def create_sankey_diagram(data):
             sources.append(node_dict[edge['from']])
             targets.append(node_dict[edge['to']])
             
-            # Valeur basée sur l'importance du nœud cible
+            # value basée sur l'importance du nœud cible
             target_node = data['nodes'][node_dict[edge['to']]]
             values.append(target_node.get('importance', 5))
             
@@ -455,7 +473,7 @@ def create_sankey_diagram(data):
     # Créer le diagramme Sankey
     fig = go.Figure(data=[go.Sankey(
         node=dict(
-            pad=40,  # EXTRÊME : 40px entre nœuds (+33% vs V7.5)
+            pad=40,  # EXTRÊME : 40px entre nodes (+33% vs V7.5)
             thickness=15,  # Très fin : 15px (-25% vs V7.5)
             line=dict(color="white", width=2),
             label=node_labels,
@@ -530,7 +548,7 @@ def create_skills_matrix(data):
             )
             
             if uses_skill:
-                # Valeur = importance de la skill
+                # value = importance de la skill
                 row.append(skill.get('importance', 5))
             else:
                 row.append(0)
@@ -604,7 +622,7 @@ st.markdown("*Transforme ton CV en graphe de connaissances interactif avec l'IA*
 uploaded_file = st.file_uploader(
     "Dépose ton CV (PDF)", 
     type=['pdf'],
-    help="Le fichier sera analysé par Gemini pour extraire les compétences, projets et relations"
+    help="Le fichier sera analysé par Gemini pour extraire les compétences, projects et relationships"
 )
 
 if uploaded_file:
@@ -625,14 +643,14 @@ if uploaded_file:
 CRITICAL INSTRUCTIONS:
 - Extract 20-30 nodes minimum (be exhaustive, not selective)
 - Create 60-80 edges minimum for a richly connected graph
-- For EACH project, list ALL technologies used (minimum 4-6 USES relationships per project)
+- For EACH project, list ALL technologies used (minimum 4-6 USES relationshipships per project)
 - Extract ALL skills mentioned, even briefly (Python, PHP, JavaScript, Docker, Git, etc.)
-- Connect skills that enable each other (ENABLES relationships)
-- Link related projects (RELATED_TO relationships)
+- Connect skills that enable each other (ENABLES relationshipships)
+- Link related projects (RELATED_TO relationshipships)
 - Connect concepts to multiple projects (IMPLEMENTED_IN)
 
-BIDIRECTIONAL CONCEPT-PROJECT RELATIONSHIPS (CRITICAL):
-For EVERY concept you identify, create IMPLEMENTED_IN relationships to ALL relevant projects:
+BIDIRECTIONAL CONCEPT-PROJECT relationshipsHIPS (CRITICAL):
+For EVERY concept you identify, create IMPLEMENTED_IN relationshipships to ALL relevant projects:
 - SSG Ecosystem -> IMPLEMENTED_IN -> [all SSG projects like wp2md, Hugo sites, Astro projects]
 - Migration Engineering -> IMPLEMENTED_IN -> [all migration projects]
 - AI Automation -> IMPLEMENTED_IN -> [all AI/LLM projects]
@@ -645,7 +663,7 @@ IMPORTANT EXAMPLES (ALWAYS CREATE BOTH DIRECTIONS):
 ✅ AI Automation -> IMPLEMENTED_IN -> Newsletter Engine
 
 PERSON-CONCEPT EXPERTISE:
-Create EXPERTISE_IN relationships from the person to their main domains:
+Create EXPERTISE_IN relationshipships from the person to their main domains:
 - Pascal -> EXPERTISE_IN -> AI Automation
 - Pascal -> EXPERTISE_IN -> Migration Engineering
 - Pascal -> EXPERTISE_IN -> Web Performance
@@ -658,7 +676,7 @@ QUALITY CHECK BEFORE RETURNING:
 ✅ Each concept has 2+ IMPLEMENTED_IN edges to projects
 ✅ Each major project has 1-2 DEMONSTRATES edges to concepts
 ✅ Person has EXPERTISE_IN to main concept domains
-✅ 60+ total relationships
+✅ 60+ total relationshipships
 
 Quality over quantity, but PRIORITIZE COMPLETENESS and DENSITY of interconnections.
 Do not artificially limit yourself to "top N" items - extract everything relevant."""
@@ -671,10 +689,10 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
                 raw_data = json.loads(clean_json)
                 st.session_state.graph_data = validate_and_enhance_graph(raw_data)
                 
-                st.success("✅ Analyse terminée !")
+                st.success("✅ analysis completed!")
                 
             except json.JSONDecodeError as e:
-                st.error(f"❌ Erreur de parsing JSON : {e}")
+                st.error(f"❌ json parsing error : {e}")
                 st.code(response.text)
                 st.stop()
             except Exception as e:
@@ -699,7 +717,7 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
                     "barnesHut": {
                         "gravitationalConstant": -8000,  # Force de répulsion très élevée
                         "centralGravity": 0.1,           # Faible gravité centrale
-                        "springLength": 250,             # Longueur des "ressorts" entre nœuds
+                        "springLength": 250,             # Longueur des "ressorts" entre nodes
                         "springConstant": 0.02,          # Rigidité des ressorts
                         "damping": 0.5,                  # Amortissement du mouvement
                         "avoidOverlap": 1                # Évite les chevauchements
@@ -717,48 +735,48 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
 
             # --- 2. BARRE LATÉRALE ET FILTRAGE ---
             with st.sidebar:
-                st.header("🎨 Visualisation")
+                st.header("🎨 visualization")
                 
                 # Sélecteur de mode de visualisation (NOUVEAU V7)
                 viz_mode = st.radio(
-                    "Mode d'affichage",
+                    "display mode",
                     options=["Network Graph", "Flow Diagram", "Skills Matrix"],
                     index=["Network Graph", "Flow Diagram", "Skills Matrix"].index(st.session_state.viz_mode),
-                    help="Choisissez comment visualiser votre graphe de compétences"
+                    help="choose how to visualize your skills graph"
                 )
                 
                 # Mettre à jour le mode si changé
                 if viz_mode != st.session_state.viz_mode:
                     st.session_state.viz_mode = viz_mode
-                    # Reset focus si on change de vue
+                    # reset focus si on change de vue
                     st.session_state.focused_node = None
                 
                 # Description des modes
                 if viz_mode == "Network Graph":
-                    st.caption("🕸️ **Exploration interactive** : Cliquez sur les nœuds pour explorer les connexions")
+                    st.caption("🕸️ **interactive exploration** : Cliquez sur les nodes pour explorer les connexions")
                 elif viz_mode == "Flow Diagram":
-                    st.caption("🌊 **Vue flux** : Suivez le parcours de vos compétences vers vos projets")
+                    st.caption("🌊 **flow view** : follow your skills journey to your projects")
                 else:
-                    st.caption("📊 **Vue matricielle** : Visualisez rapidement quels projets utilisent quelles compétences")
+                    st.caption("📊 **matrix view** : quick overview of which projects use which skills")
                 
                 st.divider()
                 
-                st.header("🔍 Filtres")
+                st.header("🔍 filters")
                 
                 all_types = sorted(list(set(n['type'] for n in data['nodes'])))
                 selected_types = st.multiselect(
-                    "Catégories :", 
+                    "categories:", 
                     all_types, 
                     default=all_types,
-                    help="Filtre les nœuds par catégorie"
+                    help="filter nodes by category"
                 )
                 
                 st.divider()
                 
                 # Sélection du modèle (nouveauté V6)
-                st.subheader("🤖 Modèle IA")
+                st.subheader("🤖 ai model")
                 gemini_model = st.selectbox(
-                    "Modèle Gemini",
+                    "gemini model",
                     options=["gemini-3-flash-preview", "gemini-3-pro-preview"],
                     index=0 if st.session_state.gemini_model == "gemini-3-flash-preview" else 1,
                     help="Flash: rapide, Pro: plus précis et inférences avancées"
@@ -770,7 +788,7 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
                     st.session_state.graph_data = None  # Reset pour forcer nouvelle analyse
                     st.info("💡 Modèle changé. Uploadez à nouveau votre CV pour réanalyser.")
                 
-                st.caption("💡 Pro recommandé pour graphes plus précis (relations technologiques)")
+                st.caption("💡 Pro recommandé pour graphes plus précis (relationships technologiques)")
                 
                 st.divider()
                 
@@ -784,21 +802,21 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
                     "Mega Wide": {"gravity": -250000, "spring": 1800}     # EXTRÊME pour aucun chevauchement
                 }
                 
-                with st.expander("⚙️ Espacement des nœuds", expanded=False):
+                with st.expander("⚙️ node spacing", expanded=False):
                     spacing_level = st.select_slider(
-                        "Niveau d'espacement",
+                        "spacing level",
                         options=["Compact", "Normal", "Large", "Extra Large", "Ultra Wide", "Mega Wide"],
                         value="Ultra Wide",  # Défaut augmenté à Ultra Wide
-                        help="Ajuste l'espace entre les nœuds pour éviter les chevauchements"
+                        help="adjust space between nodes to avoid overlaps"
                     )
                     
                     show_edge_labels = st.checkbox(
-                        "Afficher labels des relations", 
+                        "show relationshipship labels", 
                         value=False,
-                        help="Masquer les labels peut améliorer la lisibilité"
+                        help="hiding labels can improve readability"
                     )
                     
-                    st.caption(f"💡 Pour graphes très denses (30+ nœuds), utilisez 'Ultra Wide' ou 'Mega Wide'")
+                    st.caption(f"💡 for very dense graphs (30+ nodes), use 'Ultra Wide' ou 'Mega Wide'")
                 
                 st.divider()
                 
@@ -816,13 +834,13 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
                     focused_info = next((n for n in data['nodes'] if n['id'] == st.session_state.focused_node), None)
                     if focused_info:
                         st.info(f"🎯 Focus: **{focused_info['label']}**")
-                        if st.button("🔄 Reset Focus", use_container_width=True):
+                        if st.button("🔄 reset focus", use_container_width=True):
                             st.session_state.focused_node = None
                             st.rerun()
                         st.divider()
                 
                 # Statistiques
-                st.subheader("📊 Statistiques")
+                st.subheader("📊 statistics")
                 filtered_nodes_data = [n for n in data['nodes'] if n['type'] in selected_types]
                 filtered_node_ids = [n['id'] for n in filtered_nodes_data]
                 filtered_edges_data = [
@@ -832,48 +850,48 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
                 
                 col1, col2 = st.columns(2)
                 with col1:
-                    st.metric("Nœuds", len(filtered_nodes_data))
+                    st.metric("nodes", len(filtered_nodes_data))
                 with col2:
-                    st.metric("Relations", len(filtered_edges_data))
+                    st.metric("relationships", len(filtered_edges_data))
                 
-                # Densité du graphe (relations par nœud)
+                # density du graphe (relationships par nœud)
                 if len(filtered_nodes_data) > 0:
                     density = len(filtered_edges_data) / len(filtered_nodes_data)
                     st.metric(
-                        "Densité", 
+                        "density", 
                         f"{density:.1f}",
-                        help="Nombre moyen de relations par nœud. Un graphe dense a > 1.5"
+                        help="Nombre moyen de relationships par nœud. a dense graph has > 1.5"
                     )
                     
                     # Indicateur visuel de qualité
                     if density >= 2.0:
-                        st.success("🌟 Graphe très interconnecté")
+                        st.success("🌟 highly interconnected graph")
                     elif density >= 1.5:
-                        st.info("✅ Bonne interconnexion")
+                        st.info("✅ good interconnection")
                     else:
-                        st.warning("⚠️ Graphe peu connecté")
+                        st.warning("⚠️ sparsely connected graph")
                 
                 st.divider()
                 
                 # Debug info (si activé)
                 if debug_mode:
-                    st.subheader("🔍 Debug Info")
+                    st.subheader("🔍 debug info")
                     
-                    with st.expander("📊 Statistiques Détaillées", expanded=True):
-                        st.write(f"**Nœuds totaux extraits** : {len(data['nodes'])}")
-                        st.write(f"**Relations totales extraites** : {len(data['edges'])}")
+                    with st.expander("📊 statistics Détaillées", expanded=True):
+                        st.write(f"**nodes totaux extraits** : {len(data['nodes'])}")
+                        st.write(f"**relationships totales extraites** : {len(data['edges'])}")
                         
-                        # Répartition par type
+                        # distribution by type
                         node_types = {}
                         for node in data['nodes']:
                             node_type = node['type']
                             node_types[node_type] = node_types.get(node_type, 0) + 1
                         
-                        st.write("**Répartition par type** :")
+                        st.write("**distribution by type** :")
                         for node_type, count in sorted(node_types.items()):
                             st.write(f"  - {node_type}: {count}")
                     
-                    with st.expander("📋 Liste Complète des Nœuds", expanded=False):
+                    with st.expander("📋 Liste Complète des nodes", expanded=False):
                         for node in sorted(data['nodes'], key=lambda x: x.get('importance', 0), reverse=True):
                             st.write(f"**{node['label']}** ({node['type']}) - Importance: {node.get('importance', '?')}/10")
                             st.write(f"  ID: `{node['id']}`")
@@ -882,7 +900,7 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
                             st.write(f"  Connexions: {connections}")
                             st.caption("")  # Espacement
                     
-                    with st.expander("🔗 Liste Complète des Relations", expanded=False):
+                    with st.expander("🔗 Liste Complète des relationships", expanded=False):
                         for edge in data['edges']:
                             from_node = next((n for n in data['nodes'] if n['id'] == edge['from']), None)
                             to_node = next((n for n in data['nodes'] if n['id'] == edge['to']), None)
@@ -928,18 +946,18 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
                         
                         # Auto-focus si un seul résultat
                         if len(matching_nodes) == 1 and st.session_state.focused_node != matching_nodes[0]['id']:
-                            st.info("💡 Cliquez sur 📍 pour activer le focus")
+                            st.info("💡 click 📍 to activate focus")
                     else:
-                        st.warning("❌ Aucun nœud ne correspond")
+                        st.warning("❌ no matching nodes")
                 else:
-                    st.caption("💡 Tapez un nom pour rechercher un nœud spécifique")
+                    st.caption("💡 type a name to search un nœud spécifique")
                 
                 st.divider()
                 
                 st.divider()
                 
                 # Légende des couleurs
-                st.subheader("🎨 Légende")
+                st.subheader("🎨 legend")
                 color_map = {
                     "Person": "#FF4B4B",   # Rouge
                     "Role": "#F39C12",     # Orange
@@ -960,7 +978,7 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
                 st.divider()
                 
                 # Bouton de réinitialisation
-                if st.button("🔄 Analyser un nouveau CV", use_container_width=True):
+                if st.button("🔄 upload your own cv", use_container_width=True):
                     st.session_state.graph_data = None
                     st.rerun()
                 
@@ -1002,7 +1020,7 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
             )
 
             # --- 3. CRÉATION DES OBJETS GRAPH ---
-            # Déterminer les nœuds et edges actifs si mode focus
+            # Déterminer les nodes et edges actifs si mode focus
             if st.session_state.focused_node:
                 connected_nodes = get_connected_nodes(st.session_state.focused_node, data['edges'])
                 active_node_ids = {st.session_state.focused_node} | connected_nodes
@@ -1018,7 +1036,7 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
                 
                 # Appliquer le style atténué si pas dans le focus
                 if st.session_state.focused_node and n['id'] not in active_node_ids:
-                    # Couleur grise et taille réduite pour les nœuds non connectés
+                    # Couleur grise et taille réduite pour les nodes non connectés
                     node_color = "#E0E0E0"
                     node_size = node_size * 0.6
                     opacity = 0.3
@@ -1060,19 +1078,19 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
             if viz_mode == "Network Graph":
                 # Mode graphe réseau classique
                 if st.session_state.focused_node:
-                    st.success("✨ Mode Focus actif ! Les nœuds grisés ne sont pas directement connectés. Clique sur 'Reset Focus' pour revenir.")
+                    st.success("✨ focus mode active ! grayed nodes are not directly connected. click 'reset focus' to return.")
                 else:
-                    st.success("✨ Graphe prêt ! Clique sur un nœud pour activer le mode focus.")
+                    st.success("✨ graph ready! ! click un nœud to activate focus mode.")
                 
                 # Info box
-                with st.expander("💡 Comment utiliser ce graphe ?"):
+                with st.expander("💡 how to use this graph?"):
                     st.markdown("""
-                    - **Clique sur un nœud** pour activer le mode focus (met en arrière-plan tout ce qui n'est pas connecté)
-                    - **Reset Focus** pour revenir à la vue complète
-                    - **Zoom/déplace** le graphe avec ta souris
-                    - **Filtre** les catégories dans la barre latérale
-                    - Les **nœuds plus gros** sont plus importants dans ton profil
-                    - Les **couleurs** représentent les différentes catégories
+                    - **click un nœud** to activate focus mode (met en arrière-plan tout ce qui n'est pas connecté)
+                    - **reset focus** to return à la vue complète
+                    - **zoom/pan** the graph with your mouse
+                    - **filter** categories in the sidebar
+                    - Les **nodes plus gros** are more important
+                    - Les **couleurs** represent different categories
                     """)
                 
                 clicked_node_id = agraph(nodes=nodes, edges=edges, config=config)
@@ -1087,7 +1105,7 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
                     node_info = next((n for n in data['nodes'] if n['id'] == st.session_state.focused_node), None)
                     
                     if node_info:
-                        # Trouver les relations
+                        # Trouver les relationships
                         incoming = [e for e in data['edges'] if e['to'] == st.session_state.focused_node]
                         outgoing = [e for e in data['edges'] if e['from'] == st.session_state.focused_node]
                         
@@ -1105,14 +1123,14 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
                                 st.markdown(f"**Connexions** : {total_connections}")
                             
                             if incoming:
-                                st.markdown("**⬅️ Relations entrantes** :")
+                                st.markdown("**⬅️ relationships entrantes** :")
                                 for e in incoming:
                                     from_node = next((n for n in data['nodes'] if n['id'] == e['from']), None)
                                     if from_node:
                                         st.markdown(f"- {from_node['label']} **{e.get('label', '→')}** {node_info['label']}")
                             
                             if outgoing:
-                                st.markdown("**➡️ Relations sortantes** :")
+                                st.markdown("**➡️ relationships sortantes** :")
                                 for e in outgoing:
                                     to_node = next((n for n in data['nodes'] if n['id'] == e['to']), None)
                                     if to_node:
@@ -1120,18 +1138,18 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
             
             elif viz_mode == "Flow Diagram":
                 # Mode Sankey
-                st.info("🌊 **Flow Diagram** : Suivez le parcours de vos compétences vers vos projets et domaines d'expertise")
+                st.info("🌊 **flow diagram** : follow your skills journey to your projects et domaines d'expertise")
                 
-                with st.expander("💡 Comment lire ce diagramme ?"):
+                with st.expander("💡 how to read this diagram?"):
                     st.markdown("""
-                    - **Les bandes** représentent les connexions entre entités
-                    - **La largeur** indique l'importance de la connexion
-                    - **Les couleurs** correspondent aux types (Skills en bleu, Projects en vert, etc.)
-                    - **Survole** les éléments pour voir les détails
-                    - Le flux va généralement de **gauche à droite** : Skills → Projects → Concepts
+                    - **the bands** represent connections between entities
+                    - **the width** indicates connection importance
+                    - **colors** correspond to types (Skills en bleu, Projects en vert, etc.)
+                    - **hover over** elements to see details
+                    - the flow generally goes from **left to right** : Skills → Projects → Concepts
                     """)
                 
-                # Filtrer les données selon les catégories sélectionnées
+                # filterr les données selon les catégories sélectionnées
                 filtered_data = {
                     'nodes': [n for n in data['nodes'] if n['type'] in selected_types],
                     'edges': [e for e in data['edges'] 
@@ -1145,27 +1163,27 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
                 # Stats rapides
                 col1, col2, col3 = st.columns(3)
                 with col1:
-                    st.metric("Nœuds", len(filtered_data['nodes']))
+                    st.metric("nodes", len(filtered_data['nodes']))
                 with col2:
                     st.metric("Connexions", len(filtered_data['edges']))
                 with col3:
                     density = len(filtered_data['edges']) / len(filtered_data['nodes']) if len(filtered_data['nodes']) > 0 else 0
-                    st.metric("Densité", f"{density:.1f}")
+                    st.metric("density", f"{density:.1f}")
             
             elif viz_mode == "Skills Matrix":
                 # Mode Matrix
-                st.info("📊 **Skills Matrix** : Visualisez rapidement quels projets utilisent quelles compétences")
+                st.info("📊 **skills matrix** : quick overview of which projects use which skills")
                 
-                with st.expander("💡 Comment lire cette matrice ?"):
+                with st.expander("💡 how to read this matrix?"):
                     st.markdown("""
-                    - **Lignes** = Compétences techniques
-                    - **Colonnes** = Projets
-                    - **Couleur intense** = Compétence utilisée dans le projet (plus foncé = plus important)
-                    - **Gris clair** = Compétence non utilisée
-                    - **Valeur** = Niveau d'importance de la compétence (0-10)
+                    - **rows** = technical skills
+                    - **columns** = projects
+                    - **intense color** = skill used in project (darker = more important)
+                    - **light gray** = skill not used
+                    - **value** = skill importance level (0-10)
                     """)
                 
-                # Filtrer les données pour la matrix
+                # filterr les données pour la matrix
                 filtered_data = {
                     'nodes': [n for n in data['nodes'] if n['type'] in selected_types],
                     'edges': data['edges']
@@ -1192,20 +1210,20 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
                         
                         col1, col2 = st.columns(2)
                         with col1:
-                            st.success(f"🏆 **Compétence la plus utilisée** : {most_used_skill[0]} ({most_used_skill[1]} projets)")
+                            st.success(f"🏆 **most used skill** : {most_used_skill[0]} ({most_used_skill[1]} projects)")
                         with col2:
                             avg_skills_per_project = sum(skill_usage.values()) / len(projects) if projects else 0
-                            st.info(f"📈 **Moyenne** : {avg_skills_per_project:.1f} compétences par projet")
+                            st.info(f"📈 **average** : {avg_skills_per_project:.1f} skills per project")
                 else:
-                    st.warning("⚠️ Pas assez de données pour générer la matrice. Assurez-vous d'avoir des Skills et Projects dans les filtres.")
+                    st.warning("⚠️ not enough data to generate matrix. Assurez-vous d'avoir des Skills et Projects dans les filters.")
 
         except Exception as e:
-            st.error(f"❌ Erreur d'affichage : {e}")
+            st.error(f"❌ display error : {e}")
             st.exception(e)
             
 else:
     # Message d'accueil
-    st.info("👆 Upload ton CV pour commencer l'analyse")
+    st.info("👆 upload your cv to start analysis")
     
     st.markdown("---")
     
@@ -1215,7 +1233,7 @@ else:
         st.markdown("### 🎯 Objectif")
         st.markdown("""
         Transforme ton CV statique en un **graphe de connaissances dynamique** 
-        qui met en évidence tes compétences, projets et leur interconnexions.
+        qui met en évidence tes compétences, projects et leur interconnexions.
         """)
     
     with col2:
@@ -1224,7 +1242,7 @@ else:
         - Extraction automatique par IA (Gemini)
         - Visualisation interactive
         - Filtrage par catégories
-        - Analyse des relations
+        - Analyse des relationships
         """)
     
     with col3:
