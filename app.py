@@ -53,9 +53,10 @@ ALLOWED RELATIONSHIPS:
 
 CRITICAL GUIDELINES:
 1. STRICT JSON ONLY. Do not add any text before or after the JSON.
-2. MULTIMODAL ANALYSIS: If an image is provided (architecture diagram, certification), extract the text and concepts to integrate them into the graph.
-3. GRANULARITY: Create separate nodes for specific technologies.
-4. IMPORTANCE: Assign a weight (1-10) based on how central the node is to the user's career."""
+2. NOISE REDUCTION: Ignore minor technologies or tools mentioned only once. Focus on the core stack and high-level concepts to ensure graph readability.
+3. MULTIMODAL ANALYSIS: If an image is provided, extract the text and concepts.
+4. GRANULARITY: Create separate nodes for specific technologies.
+5. IMPORTANCE: Assign a weight (1-10) based on how central the node is to the user's career."""
 
 model = genai.GenerativeModel('models/gemini-3-flash-preview', system_instruction=SYSTEM_PROMPT)
 
@@ -125,11 +126,32 @@ if uploaded_file:
             ]
 
             # --- 3. CRÉATION DES OBJETS ---
-            nodes = [Node(id=n['id'], 
-                          label=n['label'], 
-                          size=n.get('importance', 5)*3 + 10, 
-                          color="#00ADEE" if n['type'] == 'Skill' else "#F39C12") 
-                     for n in filtered_nodes_data]
+            # Dictionnaire de couleurs pragmatique
+            color_map = {
+                "Person": "#FF4B4B",   # Rouge (Toi)
+                "Role": "#F39C12",     # Orange
+                "Skill": "#00ADEE",    # Bleu
+                "Project": "#2ECC71",  # Vert
+                "Entity": "#9B59B6",   # Violet
+                "Concept": "#BDC3C7"   # Gris
+            }
+
+            nodes = []
+            for n in filtered_nodes_data:
+                # On récupère la couleur selon le type, gris par défaut
+                node_color = color_map.get(n['type'], "#BDC3C7")
+                
+                # Astuce de clarté : Ton nœud est beaucoup plus gros
+                node_size = n.get('importance', 5) * 3 + 10
+                if n['type'] == "Person":
+                    node_size = 50 
+                
+                nodes.append(Node(
+                    id=n['id'], 
+                    label=n['label'], 
+                    size=node_size, 
+                    color=node_color
+                ))
 
             edges = [Edge(source=e['from'], target=e['to']) for e in filtered_edges_data]
 
