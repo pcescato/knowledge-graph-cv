@@ -455,8 +455,8 @@ def create_sankey_diagram(data):
     # Créer le diagramme Sankey
     fig = go.Figure(data=[go.Sankey(
         node=dict(
-            pad=30,  # Augmenté de 20 à 30 (+50% espace entre nœuds)
-            thickness=20,  # Réduit de 25 à 20 (plus fin = plus d'espace)
+            pad=40,  # EXTRÊME : 40px entre nœuds (+33% vs V7.5)
+            thickness=15,  # Très fin : 15px (-25% vs V7.5)
             line=dict(color="white", width=2),
             label=node_labels,
             color=node_colors,
@@ -482,11 +482,11 @@ def create_sankey_diagram(data):
             'font': {'size': 24, 'family': 'Verdana, Segoe UI, Noto Sans, sans-serif'}
         },
         font=dict(
-            size=15, 
+            size=14,  # Réduit de 15 à 14 (labels moins volumineux)
             family="Verdana, Segoe UI, Noto Sans, sans-serif", 
             color="#000000"
         ),
-        height=1200,  # Augmenté de 1000 à 1200 (+20% espace vertical)
+        height=1500,  # EXTRÊME : 1500px (+25% vs V7.5)
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
         margin=dict(l=10, r=10, t=80, b=10)
@@ -496,7 +496,7 @@ def create_sankey_diagram(data):
     fig.update_traces(
         textfont=dict(
             family="Verdana, Segoe UI, Noto Sans, sans-serif",
-            size=15,
+            size=14,  # Cohérent avec font global
             color="#000000"
         )
     )
