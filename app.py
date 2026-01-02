@@ -4,6 +4,9 @@ import os
 import json
 from streamlit_agraph import agraph, Node, Edge, Config
 from dotenv import load_dotenv
+import plotly.graph_objects as go
+import plotly.express as px
+import pandas as pd
 
 # Chargement des variables d'env
 load_dotenv()
@@ -22,6 +25,8 @@ if "focused_node" not in st.session_state:
     st.session_state.focused_node = None
 if "gemini_model" not in st.session_state:
     st.session_state.gemini_model = "gemini-3-flash-preview"
+if "viz_mode" not in st.session_state:
+    st.session_state.viz_mode = "Network Graph"
 
 SYSTEM_PROMPT = """You are an expert Knowledge Engineer analyzing professional CVs to create DENSE, INTERCONNECTED knowledge graphs.
 
@@ -408,6 +413,167 @@ def get_relevant_edges(node_id, edges):
             relevant.append(edge)
     return relevant
 
+def create_sankey_diagram(data):
+    """Crée un diagramme Sankey montrant les flux Person → Skills → Projects → Concepts"""
+    
+    # Définir les couleurs par type
+    color_map = {
+        "Person": "rgba(255, 75, 75, 0.8)",
+        "Role": "rgba(243, 156, 18, 0.8)",
+        "Skill": "rgba(0, 173, 238, 0.8)",
+        "Project": "rgba(46, 204, 113, 0.8)",
+        "Entity": "rgba(155, 89, 182, 0.8)",
+        "Concept": "rgba(149, 165, 166, 0.8)"
+    }
+    
+    # Créer un mapping id -> index
+    node_dict = {node['id']: i for i, node in enumerate(data['nodes'])}
+    
+    # Préparer les nœuds
+    node_labels = [node['label'] for node in data['nodes']]
+    node_colors = [color_map.get(node['type'], "rgba(189, 195, 199, 0.8)") for node in data['nodes']]
+    
+    # Préparer les liens avec valeurs basées sur l'importance
+    sources = []
+    targets = []
+    values = []
+    link_colors = []
+    
+    for edge in data['edges']:
+        if edge['from'] in node_dict and edge['to'] in node_dict:
+            sources.append(node_dict[edge['from']])
+            targets.append(node_dict[edge['to']])
+            
+            # Valeur basée sur l'importance du nœud cible
+            target_node = data['nodes'][node_dict[edge['to']]]
+            values.append(target_node.get('importance', 5))
+            
+            # Couleur du lien = couleur du nœud source avec transparence
+            source_node = data['nodes'][node_dict[edge['from']]]
+            link_colors.append(color_map.get(source_node['type'], "rgba(189, 195, 199, 0.4)").replace("0.8", "0.3"))
+    
+    # Créer le diagramme Sankey
+    fig = go.Figure(data=[go.Sankey(
+        node=dict(
+            pad=15,
+            thickness=20,
+            line=dict(color="white", width=2),
+            label=node_labels,
+            color=node_colors,
+            hovertemplate='%{label}<br>Importance: %{value}<extra></extra>'
+        ),
+        link=dict(
+            source=sources,
+            target=targets,
+            value=values,
+            color=link_colors,
+            hovertemplate='%{source.label} → %{target.label}<br>Importance: %{value}<extra></extra>'
+        )
+    )])
+    
+    fig.update_layout(
+        title={
+            'text': "Career Flow: Skills → Projects → Expertise",
+            'x': 0.5,
+            'xanchor': 'center',
+            'font': {'size': 20}
+        },
+        font=dict(size=12, family="Arial"),
+        height=900,
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)'
+    )
+    
+    return fig
+
+def create_skills_matrix(data):
+    """Crée une matrice heatmap Skills × Projects"""
+    
+    # Extraire les skills et projects
+    skills = [n for n in data['nodes'] if n['type'] == 'Skill']
+    projects = [n for n in data['nodes'] if n['type'] == 'Project']
+    
+    if not skills or not projects:
+        return None
+    
+    # Créer la matrice
+    matrix = []
+    skill_labels = []
+    project_labels = []
+    
+    for skill in skills:
+        row = []
+        skill_labels.append(skill['label'])
+        
+        for project in projects:
+            # Chercher si le projet utilise cette skill
+            uses_skill = any(
+                e['from'] == project['id'] and e['to'] == skill['id'] and e['label'] == 'USES'
+                for e in data['edges']
+            )
+            
+            if uses_skill:
+                # Valeur = importance de la skill
+                row.append(skill.get('importance', 5))
+            else:
+                row.append(0)
+        
+        matrix.append(row)
+    
+    project_labels = [p['label'] for p in projects]
+    
+    # Créer le DataFrame
+    df = pd.DataFrame(matrix, index=skill_labels, columns=project_labels)
+    
+    # Créer la heatmap
+    fig = go.Figure(data=go.Heatmap(
+        z=df.values,
+        x=df.columns,
+        y=df.index,
+        colorscale=[
+            [0, 'rgba(240, 240, 240, 0.3)'],      # Pas utilisé (gris très clair)
+            [0.3, 'rgba(135, 206, 235, 0.5)'],    # Faible importance (bleu clair)
+            [0.6, 'rgba(0, 173, 238, 0.7)'],      # Moyenne importance (bleu)
+            [1, 'rgba(0, 123, 167, 0.9)']         # Haute importance (bleu foncé)
+        ],
+        text=df.values,
+        texttemplate='%{text}',
+        textfont={"size": 10},
+        hovertemplate='<b>%{y}</b><br>Project: %{x}<br>Importance: %{z}<extra></extra>',
+        showscale=True,
+        colorbar=dict(
+            title="Importance",
+            titleside="right",
+            tickmode="linear",
+            tick0=0,
+            dtick=2
+        )
+    ))
+    
+    fig.update_layout(
+        title={
+            'text': "Skills × Projects Matrix",
+            'x': 0.5,
+            'xanchor': 'center',
+            'font': {'size': 20}
+        },
+        xaxis=dict(
+            title="Projects",
+            tickangle=-45,
+            side='top'
+        ),
+        yaxis=dict(
+            title="Skills",
+            autorange='reversed'
+        ),
+        font=dict(size=11, family="Arial"),
+        height=600 + len(skills) * 25,  # Hauteur dynamique
+        plot_bgcolor='white',
+        paper_bgcolor='rgba(0,0,0,0)'
+    )
+    
+    return fig
+
 # Configuration de la page
 st.set_page_config(
     page_title="AI Knowledge Graph CV Builder",
@@ -534,6 +700,32 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
 
             # --- 2. BARRE LATÉRALE ET FILTRAGE ---
             with st.sidebar:
+                st.header("🎨 Visualisation")
+                
+                # Sélecteur de mode de visualisation (NOUVEAU V7)
+                viz_mode = st.radio(
+                    "Mode d'affichage",
+                    options=["Network Graph", "Flow Diagram", "Skills Matrix"],
+                    index=["Network Graph", "Flow Diagram", "Skills Matrix"].index(st.session_state.viz_mode),
+                    help="Choisissez comment visualiser votre graphe de compétences"
+                )
+                
+                # Mettre à jour le mode si changé
+                if viz_mode != st.session_state.viz_mode:
+                    st.session_state.viz_mode = viz_mode
+                    # Reset focus si on change de vue
+                    st.session_state.focused_node = None
+                
+                # Description des modes
+                if viz_mode == "Network Graph":
+                    st.caption("🕸️ **Exploration interactive** : Cliquez sur les nœuds pour explorer les connexions")
+                elif viz_mode == "Flow Diagram":
+                    st.caption("🌊 **Vue flux** : Suivez le parcours de vos compétences vers vos projets")
+                else:
+                    st.caption("📊 **Vue matricielle** : Visualisez rapidement quels projets utilisent quelles compétences")
+                
+                st.divider()
+                
                 st.header("🔍 Filtres")
                 
                 all_types = sorted(list(set(n['type'] for n in data['nodes'])))
@@ -846,79 +1038,149 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
                     )
                 )
 
-            # --- 4. AFFICHAGE DU GRAPHE ---
-            if st.session_state.focused_node:
-                st.success("✨ Mode Focus actif ! Les nœuds grisés ne sont pas directement connectés. Clique sur 'Reset Focus' pour revenir.")
-            else:
-                st.success("✨ Graphe prêt ! Clique sur un nœud pour activer le mode focus.")
+            # --- 4. AFFICHAGE SELON LE MODE DE VISUALISATION ---
             
-            # Info box
-            with st.expander("💡 Comment utiliser ce graphe ?"):
-                st.markdown("""
-                - **Clique sur un nœud** pour activer le mode focus (met en arrière-plan tout ce qui n'est pas connecté)
-                - **Reset Focus** pour revenir à la vue complète
-                - **Zoom/déplace** le graphe avec ta souris
-                - **Filtre** les catégories dans la barre latérale
-                - Les **nœuds plus gros** sont plus importants dans ton profil
-                - Les **couleurs** représentent les différentes catégories
-                """)
-            
-            clicked_node_id = agraph(nodes=nodes, edges=edges, config=config)
-
-            # --- 5. GESTION DU CLIC (Activation du mode focus) ---
-            if clicked_node_id and clicked_node_id != st.session_state.focused_node:
-                st.session_state.focused_node = clicked_node_id
-                st.rerun()
-            # --- 5. GESTION DU CLIC (Activation du mode focus) ---
-            if clicked_node_id and clicked_node_id != st.session_state.focused_node:
-                st.session_state.focused_node = clicked_node_id
-                st.rerun()
-            
-            # Afficher les détails du nœud en focus
-            if st.session_state.focused_node:
-                node_info = next((n for n in data['nodes'] if n['id'] == st.session_state.focused_node), None)
+            if viz_mode == "Network Graph":
+                # Mode graphe réseau classique
+                if st.session_state.focused_node:
+                    st.success("✨ Mode Focus actif ! Les nœuds grisés ne sont pas directement connectés. Clique sur 'Reset Focus' pour revenir.")
+                else:
+                    st.success("✨ Graphe prêt ! Clique sur un nœud pour activer le mode focus.")
                 
-                if node_info:
-                    # Trouver les relations
-                    incoming = [e for e in data['edges'] if e['to'] == st.session_state.focused_node]
-                    outgoing = [e for e in data['edges'] if e['from'] == st.session_state.focused_node]
+                # Info box
+                with st.expander("💡 Comment utiliser ce graphe ?"):
+                    st.markdown("""
+                    - **Clique sur un nœud** pour activer le mode focus (met en arrière-plan tout ce qui n'est pas connecté)
+                    - **Reset Focus** pour revenir à la vue complète
+                    - **Zoom/déplace** le graphe avec ta souris
+                    - **Filtre** les catégories dans la barre latérale
+                    - Les **nœuds plus gros** sont plus importants dans ton profil
+                    - Les **couleurs** représentent les différentes catégories
+                    """)
+                
+                clicked_node_id = agraph(nodes=nodes, edges=edges, config=config)
+
+                # --- 5. GESTION DU CLIC (Activation du mode focus) ---
+                if clicked_node_id and clicked_node_id != st.session_state.focused_node:
+                    st.session_state.focused_node = clicked_node_id
+                    st.rerun()
+                
+                # Afficher les détails du nœud en focus
+                if st.session_state.focused_node:
+                    node_info = next((n for n in data['nodes'] if n['id'] == st.session_state.focused_node), None)
                     
-                    with details_container.container():
-                        st.markdown(f"### 📄 {node_info['label']}")
+                    if node_info:
+                        # Trouver les relations
+                        incoming = [e for e in data['edges'] if e['to'] == st.session_state.focused_node]
+                        outgoing = [e for e in data['edges'] if e['from'] == st.session_state.focused_node]
                         
-                        # Badges
-                        col1, col2, col3 = st.columns(3)
+                        with details_container.container():
+                            st.markdown(f"### 📄 {node_info['label']}")
+                            
+                            # Badges
+                            col1, col2, col3 = st.columns(3)
+                            with col1:
+                                st.markdown(f"**Type** : {node_info['type']}")
+                            with col2:
+                                st.markdown(f"**Importance** : {node_info.get('importance', '?')}/10")
+                            with col3:
+                                total_connections = len(incoming) + len(outgoing)
+                                st.markdown(f"**Connexions** : {total_connections}")
+                            
+                            if incoming:
+                                st.markdown("**⬅️ Relations entrantes** :")
+                                for e in incoming:
+                                    from_node = next((n for n in data['nodes'] if n['id'] == e['from']), None)
+                                    if from_node:
+                                        st.markdown(f"- {from_node['label']} **{e.get('label', '→')}** {node_info['label']}")
+                            
+                            if outgoing:
+                                st.markdown("**➡️ Relations sortantes** :")
+                                for e in outgoing:
+                                    to_node = next((n for n in data['nodes'] if n['id'] == e['to']), None)
+                                    if to_node:
+                                        st.markdown(f"- {node_info['label']} **{e.get('label', '→')}** {to_node['label']}")
+            
+            elif viz_mode == "Flow Diagram":
+                # Mode Sankey
+                st.info("🌊 **Flow Diagram** : Suivez le parcours de vos compétences vers vos projets et domaines d'expertise")
+                
+                with st.expander("💡 Comment lire ce diagramme ?"):
+                    st.markdown("""
+                    - **Les bandes** représentent les connexions entre entités
+                    - **La largeur** indique l'importance de la connexion
+                    - **Les couleurs** correspondent aux types (Skills en bleu, Projects en vert, etc.)
+                    - **Survole** les éléments pour voir les détails
+                    - Le flux va généralement de **gauche à droite** : Skills → Projects → Concepts
+                    """)
+                
+                # Filtrer les données selon les catégories sélectionnées
+                filtered_data = {
+                    'nodes': [n for n in data['nodes'] if n['type'] in selected_types],
+                    'edges': [e for e in data['edges'] 
+                             if any(n['id'] == e['from'] and n['type'] in selected_types for n in data['nodes']) and
+                                any(n['id'] == e['to'] and n['type'] in selected_types for n in data['nodes'])]
+                }
+                
+                sankey_fig = create_sankey_diagram(filtered_data)
+                st.plotly_chart(sankey_fig, use_container_width=True)
+                
+                # Stats rapides
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Nœuds", len(filtered_data['nodes']))
+                with col2:
+                    st.metric("Connexions", len(filtered_data['edges']))
+                with col3:
+                    density = len(filtered_data['edges']) / len(filtered_data['nodes']) if len(filtered_data['nodes']) > 0 else 0
+                    st.metric("Densité", f"{density:.1f}")
+            
+            elif viz_mode == "Skills Matrix":
+                # Mode Matrix
+                st.info("📊 **Skills Matrix** : Visualisez rapidement quels projets utilisent quelles compétences")
+                
+                with st.expander("💡 Comment lire cette matrice ?"):
+                    st.markdown("""
+                    - **Lignes** = Compétences techniques
+                    - **Colonnes** = Projets
+                    - **Couleur intense** = Compétence utilisée dans le projet (plus foncé = plus important)
+                    - **Gris clair** = Compétence non utilisée
+                    - **Valeur** = Niveau d'importance de la compétence (0-10)
+                    """)
+                
+                # Filtrer les données pour la matrix
+                filtered_data = {
+                    'nodes': [n for n in data['nodes'] if n['type'] in selected_types],
+                    'edges': data['edges']
+                }
+                
+                matrix_fig = create_skills_matrix(filtered_data)
+                
+                if matrix_fig:
+                    st.plotly_chart(matrix_fig, use_container_width=True)
+                    
+                    # Insights
+                    skills = [n for n in filtered_data['nodes'] if n['type'] == 'Skill']
+                    projects = [n for n in filtered_data['nodes'] if n['type'] == 'Project']
+                    
+                    # Trouver la skill la plus utilisée
+                    skill_usage = {}
+                    for skill in skills:
+                        count = sum(1 for e in data['edges'] 
+                                  if e['to'] == skill['id'] and e['label'] == 'USES')
+                        skill_usage[skill['label']] = count
+                    
+                    if skill_usage:
+                        most_used_skill = max(skill_usage.items(), key=lambda x: x[1])
+                        
+                        col1, col2 = st.columns(2)
                         with col1:
-                            st.markdown(f"**Type:** `{node_info['type']}`")
+                            st.success(f"🏆 **Compétence la plus utilisée** : {most_used_skill[0]} ({most_used_skill[1]} projets)")
                         with col2:
-                            importance = node_info.get('importance', 5)
-                            st.markdown(f"**Importance:** `{importance}/10`")
-                        with col3:
-                            total_connections = len(incoming) + len(outgoing)
-                            st.markdown(f"**Connexions:** `{total_connections}`")
-                        
-                        st.divider()
-                        
-                        # Relations sortantes
-                        if outgoing:
-                            st.markdown("**🔗 Relations sortantes:**")
-                            for e in outgoing[:8]:  # Limiter à 8
-                                target = next((n for n in data['nodes'] if n['id'] == e['to']), None)
-                                if target:
-                                    label = e.get('label', '→')
-                                    st.markdown(f"  `{label}` → **{target['label']}** *({target['type']})*")
-                        
-                        # Relations entrantes
-                        if incoming:
-                            st.markdown("**🔗 Relations entrantes:**")
-                            for e in incoming[:8]:  # Limiter à 8
-                                source = next((n for n in data['nodes'] if n['id'] == e['from']), None)
-                                if source:
-                                    label = e.get('label', '←')
-                                    st.markdown(f"  **{source['label']}** *({source['type']})* `{label}`")
-                        
-                        if not incoming and not outgoing:
-                            st.info("Aucune relation trouvée pour ce nœud.")
+                            avg_skills_per_project = sum(skill_usage.values()) / len(projects) if projects else 0
+                            st.info(f"📈 **Moyenne** : {avg_skills_per_project:.1f} compétences par projet")
+                else:
+                    st.warning("⚠️ Pas assez de données pour générer la matrice. Assurez-vous d'avoir des Skills et Projects dans les filtres.")
 
         except Exception as e:
             st.error(f"❌ Erreur d'affichage : {e}")
