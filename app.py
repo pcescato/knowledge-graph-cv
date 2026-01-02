@@ -18,6 +18,8 @@ genai.configure(api_key=api_key)
 # Initialisation de la mémoire pour éviter de relancer Gemini au clic
 if "graph_data" not in st.session_state:
     st.session_state.graph_data = None
+if "focused_node" not in st.session_state:
+    st.session_state.focused_node = None
 
 SYSTEM_PROMPT = """You are an expert Knowledge Engineer analyzing professional CVs.
 
@@ -150,6 +152,24 @@ def calculate_node_size(node_type, importance):
     base = base_sizes.get(node_type, 25)
     return base + (importance * 2)
 
+def get_connected_nodes(node_id, edges):
+    """Retourne tous les nœuds directement connectés à un nœud donné"""
+    connected = set()
+    for edge in edges:
+        if edge['from'] == node_id:
+            connected.add(edge['to'])
+        if edge['to'] == node_id:
+            connected.add(edge['from'])
+    return connected
+
+def get_relevant_edges(node_id, edges):
+    """Retourne les edges connectés à un nœud donné"""
+    relevant = []
+    for edge in edges:
+        if edge['from'] == node_id or edge['to'] == node_id:
+            relevant.append(edge)
+    return relevant
+
 # Configuration de la page
 st.set_page_config(
     page_title="AI Knowledge Graph CV Builder",
@@ -238,6 +258,16 @@ if uploaded_file:
                 
                 st.divider()
                 
+                # Mode focus
+                if st.session_state.focused_node:
+                    focused_info = next((n for n in data['nodes'] if n['id'] == st.session_state.focused_node), None)
+                    if focused_info:
+                        st.info(f"🎯 Focus: **{focused_info['label']}**")
+                        if st.button("🔄 Reset Focus", use_container_width=True):
+                            st.session_state.focused_node = None
+                            st.rerun()
+                        st.divider()
+                
                 # Statistiques
                 st.subheader("📊 Statistiques")
                 filtered_nodes_data = [n for n in data['nodes'] if n['type'] in selected_types]
@@ -287,10 +317,28 @@ if uploaded_file:
                 details_container = st.empty()
 
             # --- 3. CRÉATION DES OBJETS GRAPH ---
+            # Déterminer les nœuds et edges actifs si mode focus
+            if st.session_state.focused_node:
+                connected_nodes = get_connected_nodes(st.session_state.focused_node, data['edges'])
+                active_node_ids = {st.session_state.focused_node} | connected_nodes
+                active_edges = get_relevant_edges(st.session_state.focused_node, data['edges'])
+            else:
+                active_node_ids = set(filtered_node_ids)
+                active_edges = filtered_edges_data
+            
             nodes = []
             for n in filtered_nodes_data:
                 node_color = color_map.get(n['type'], "#BDC3C7")
                 node_size = calculate_node_size(n['type'], n.get('importance', 5))
+                
+                # Appliquer le style atténué si pas dans le focus
+                if st.session_state.focused_node and n['id'] not in active_node_ids:
+                    # Couleur grise et taille réduite pour les nœuds non connectés
+                    node_color = "#E0E0E0"
+                    node_size = node_size * 0.6
+                    opacity = 0.3
+                else:
+                    opacity = 1.0
                 
                 nodes.append(Node(
                     id=n['id'], 
@@ -300,23 +348,34 @@ if uploaded_file:
                     shape="dot"
                 ))
 
-            edges = [
-                Edge(
-                    source=e['from'], 
-                    target=e['to'],
-                    label=e.get('label', ''),
-                    color="#95A5A6"
-                ) 
-                for e in filtered_edges_data
-            ]
+            edges = []
+            for e in filtered_edges_data:
+                # Déterminer si l'edge est active
+                is_active = (not st.session_state.focused_node) or (e in active_edges)
+                
+                edge_color = "#95A5A6" if is_active else "#E8E8E8"
+                edge_width = 2 if is_active else 1
+                
+                edges.append(
+                    Edge(
+                        source=e['from'], 
+                        target=e['to'],
+                        label=e.get('label', '') if is_active else '',
+                        color=edge_color
+                    )
+                )
 
             # --- 4. AFFICHAGE DU GRAPHE ---
-            st.success("✨ Graphe prêt ! Clique sur un nœud pour voir les détails.")
+            if st.session_state.focused_node:
+                st.success("✨ Mode Focus actif ! Les nœuds grisés ne sont pas directement connectés. Clique sur 'Reset Focus' pour revenir.")
+            else:
+                st.success("✨ Graphe prêt ! Clique sur un nœud pour activer le mode focus.")
             
             # Info box
             with st.expander("💡 Comment utiliser ce graphe ?"):
                 st.markdown("""
-                - **Clique sur un nœud** pour voir ses détails et relations
+                - **Clique sur un nœud** pour activer le mode focus (met en arrière-plan tout ce qui n'est pas connecté)
+                - **Reset Focus** pour revenir à la vue complète
                 - **Zoom/déplace** le graphe avec ta souris
                 - **Filtre** les catégories dans la barre latérale
                 - Les **nœuds plus gros** sont plus importants dans ton profil
@@ -325,14 +384,23 @@ if uploaded_file:
             
             clicked_node_id = agraph(nodes=nodes, edges=edges, config=config)
 
-            # --- 5. GESTION DU CLIC (Affichage des détails) ---
-            if clicked_node_id:
-                node_info = next((n for n in data['nodes'] if n['id'] == clicked_node_id), None)
+            # --- 5. GESTION DU CLIC (Activation du mode focus) ---
+            if clicked_node_id and clicked_node_id != st.session_state.focused_node:
+                st.session_state.focused_node = clicked_node_id
+                st.rerun()
+            # --- 5. GESTION DU CLIC (Activation du mode focus) ---
+            if clicked_node_id and clicked_node_id != st.session_state.focused_node:
+                st.session_state.focused_node = clicked_node_id
+                st.rerun()
+            
+            # Afficher les détails du nœud en focus
+            if st.session_state.focused_node:
+                node_info = next((n for n in data['nodes'] if n['id'] == st.session_state.focused_node), None)
                 
                 if node_info:
                     # Trouver les relations
-                    incoming = [e for e in data['edges'] if e['to'] == clicked_node_id]
-                    outgoing = [e for e in data['edges'] if e['from'] == clicked_node_id]
+                    incoming = [e for e in data['edges'] if e['to'] == st.session_state.focused_node]
+                    outgoing = [e for e in data['edges'] if e['from'] == st.session_state.focused_node]
                     
                     with details_container.container():
                         st.markdown(f"### 📄 {node_info['label']}")
