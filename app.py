@@ -455,12 +455,14 @@ def create_sankey_diagram(data):
     # Créer le diagramme Sankey
     fig = go.Figure(data=[go.Sankey(
         node=dict(
-            pad=15,
-            thickness=20,
+            pad=20,  # Augmenté de 15 à 20
+            thickness=25,  # Augmenté de 20 à 25
             line=dict(color="white", width=2),
             label=node_labels,
             color=node_colors,
-            hovertemplate='%{label}<br>Importance: %{value}<extra></extra>'
+            hovertemplate='%{label}<br>Importance: %{value}<extra></extra>',
+            # Forcer l'affichage des labels
+            align="justify"
         ),
         link=dict(
             source=sources,
@@ -468,7 +470,10 @@ def create_sankey_diagram(data):
             value=values,
             color=link_colors,
             hovertemplate='%{source.label} → %{target.label}<br>Importance: %{value}<extra></extra>'
-        )
+        ),
+        # Paramètres d'arrangement
+        arrangement='snap',
+        orientation='h'
     )])
     
     fig.update_layout(
@@ -476,12 +481,13 @@ def create_sankey_diagram(data):
             'text': "Career Flow: Skills → Projects → Expertise",
             'x': 0.5,
             'xanchor': 'center',
-            'font': {'size': 20}
+            'font': {'size': 24, 'family': 'Arial Black'}  # Titre plus gros
         },
-        font=dict(size=12, family="Arial"),
-        height=900,
+        font=dict(size=14, family="Arial Black", color="#000000"),  # Police plus grosse et bold
+        height=1000,  # Augmenté de 900 à 1000
         plot_bgcolor='rgba(0,0,0,0)',
-        paper_bgcolor='rgba(0,0,0,0)'
+        paper_bgcolor='rgba(0,0,0,0)',
+        margin=dict(l=10, r=10, t=80, b=10)  # Marges optimisées
     )
     
     return fig
@@ -758,20 +764,21 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
                 st.divider()
                 
                 # Contrôles d'espacement (nouveauté)
-                # Mapping vers les paramètres de physique
+                # Mapping vers les paramètres de physique (renforcés pour graphes très denses)
                 spacing_configs = {
-                    "Compact": {"gravity": -8000, "spring": 200},
-                    "Normal": {"gravity": -15000, "spring": 280},
-                    "Large": {"gravity": -20000, "spring": 350},
-                    "Extra Large": {"gravity": -30000, "spring": 450},
-                    "Ultra Wide": {"gravity": -40000, "spring": 550}
+                    "Compact": {"gravity": -10000, "spring": 250},  # Augmenté
+                    "Normal": {"gravity": -20000, "spring": 350},   # Augmenté
+                    "Large": {"gravity": -30000, "spring": 450},    # Augmenté
+                    "Extra Large": {"gravity": -50000, "spring": 650},  # Augmenté
+                    "Ultra Wide": {"gravity": -70000, "spring": 850},   # Augmenté
+                    "Mega Wide": {"gravity": -100000, "spring": 1100}   # NOUVEAU
                 }
                 
                 with st.expander("⚙️ Espacement des nœuds", expanded=False):
                     spacing_level = st.select_slider(
                         "Niveau d'espacement",
-                        options=["Compact", "Normal", "Large", "Extra Large", "Ultra Wide"],
-                        value="Extra Large",  # Défaut augmenté
+                        options=["Compact", "Normal", "Large", "Extra Large", "Ultra Wide", "Mega Wide"],
+                        value="Ultra Wide",  # Défaut augmenté à Ultra Wide
                         help="Ajuste l'espace entre les nœuds pour éviter les chevauchements"
                     )
                     
@@ -781,7 +788,7 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
                         help="Masquer les labels peut améliorer la lisibilité"
                     )
                     
-                    st.caption(f"💡 Pour graphes denses, utilisez 'Extra Large' ou 'Ultra Wide'")
+                    st.caption(f"💡 Pour graphes très denses (30+ nœuds), utilisez 'Ultra Wide' ou 'Mega Wide'")
                 
                 st.divider()
                 
@@ -957,8 +964,8 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
             spacing_params = spacing_configs.get(spacing_level, spacing_configs["Large"])
             
             config = Config(
-                width=2000,
-                height=1400,
+                width=2500,  # Augmenté de 2000 à 2500
+                height=1600,  # Augmenté de 1400 à 1600
                 directed=True,
                 physics=True,
                 nodeHighlightBehavior=True,
