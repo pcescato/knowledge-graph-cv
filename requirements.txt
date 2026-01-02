@@ -3,4 +3,4 @@ google-generativeai==0.3.2
 streamlit-agraph==0.0.45
 python-dotenv==1.0.0
 plotly==5.18.0
-pandas==2.1.4
+pandas==2.2.3
