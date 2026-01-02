@@ -16,9 +16,45 @@ if not api_key:
 genai.configure(api_key=api_key)
 
 # Ton prompt anglais testé dans AI Studio
-SYSTEM_PROMPT = """You are an expert Knowledge Engineer... (copie ici ton prompt complet)"""
+SYSTEM_PROMPT = """You are an expert Knowledge Engineer and Entity Extraction specialist. 
+Your goal is to analyze professional documents (CVs, portfolios, technical articles) and transform them into a structured Knowledge Graph.
 
-model = genai.GenerativeModel('gemini-1.5-flash', system_instruction=SYSTEM_PROMPT)
+OUTPUT FORMAT:
+You must strictly respond in valid JSON format. No conversational filler or markdown code blocks. 
+Structure:
+{
+  "nodes": [
+    {"id": "unique_id", "label": "Entity Name", "type": "Category", "importance": 1-10}
+  ],
+  "edges": [
+    {"from": "source_id", "to": "target_id", "label": "relationship_verb"}
+  ]
+}
+
+ALLOWED NODE CATEGORIES:
+- "Person": The candidate/author.
+- "Role": Job titles or positions.
+- "Skill": Technologies, frameworks, or soft skills.
+- "Project": Specific achievements or work samples.
+- "Entity": Companies, schools, or organizations.
+- "Concept": Theoretical topics (e.g., "Serverless", "Graph Theory").
+
+ALLOWED RELATIONSHIPS:
+- "HELD_POSITION" (Person -> Role)
+- "WORKED_AT" (Role -> Entity)
+- "MASTERS" (Person -> Skill)
+- "CREATED" (Role/Person -> Project)
+- "USED" (Project -> Skill)
+- "AUTHOR_OF" (Person -> Project/Article)
+- "COVERS" (Project/Article -> Concept)
+
+CRITICAL GUIDELINES:
+1. STRICT JSON ONLY. Do not add any text before or after the JSON.
+2. MULTIMODAL ANALYSIS: If an image is provided (architecture diagram, certification), extract the text and concepts to integrate them into the graph.
+3. GRANULARITY: Create separate nodes for specific technologies.
+4. IMPORTANCE: Assign a weight (1-10) based on how central the node is to the user's career."""
+
+model = genai.GenerativeModel('models/gemini-3-flash-preview', system_instruction=SYSTEM_PROMPT)
 
 st.set_page_config(layout="wide")
 st.title("🌐 AI Knowledge Graph CV Builder")
