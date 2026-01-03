@@ -638,6 +638,282 @@ st.markdown("""
 # Safety: ensure uploaded_file is defined before first use to avoid NameError
 uploaded_file = None
 
+# Prepare a safe data object for the sidebar (may be empty when no graph yet)
+sidebar_data = st.session_state.graph_data if st.session_state.graph_data is not None else { 'nodes': [], 'edges': [] }
+
+# Sidebar: render independently so the uploader can appear even when no graph is loaded
+with st.sidebar:
+    # Conditional File Uploader
+    uploaded_file = None
+    if st.session_state.show_uploader:
+        uploaded_file = st.file_uploader(
+            "Upload Your CV (PDF)", 
+            type=['pdf'],
+            help="The file will be analyzed by Gemini to extract skills, projects and relationships"
+        )
+        if st.button("❌ Cancel Upload", use_container_width=True):
+            st.session_state.show_uploader = False
+            st.rerun()
+    elif st.session_state.graph_data is not None and st.session_state.demo_loaded:
+        # Only show the trigger button if we are in demo mode or just starting
+        if st.button("🚀 Upload Your Own CV", use_container_width=True):
+            st.session_state.graph_data = None
+            st.session_state.show_uploader = True
+            st.rerun()
+    elif st.session_state.graph_data is None and not st.session_state.demo_loaded and not st.session_state.show_uploader:
+        if st.button("🚀 Upload Your Own CV", use_container_width=True):
+            st.session_state.show_uploader = True
+            st.session_state.graph_data = None
+            st.rerun()
+    
+    st.divider()
+    st.header("🎨 visualization")
+    
+    # Sélecteur de mode de visualisation (NOUVEAU V7)
+    viz_mode = st.radio(
+        "display mode",
+        options=["Network Graph", "Flow Diagram", "Skills Matrix"],
+        key="viz_mode",  # ← FIX: Lie directement à st.session_state.viz_mode
+        help="choose how to visualize your skills graph"
+    )
+    
+    # Reset focus when changing views (track previous mode)
+    if "prev_viz_mode" not in st.session_state:
+        st.session_state.prev_viz_mode = viz_mode
+    
+    if viz_mode != st.session_state.prev_viz_mode:
+        st.session_state.focused_node = None
+        st.session_state.prev_viz_mode = viz_mode
+    
+    # Description des modes
+    if viz_mode == "Network Graph":
+        st.caption("🕸️ **interactive exploration**: Click nodes to explore connections")
+    elif viz_mode == "Flow Diagram":
+        st.caption("🌊 **flow view** : follow your skills journey to your projects")
+    else:
+        st.caption("📊 **matrix view** : quick overview of which projects use which skills")
+    
+    st.divider()
+    
+    st.header("🔍 filters")
+    
+    all_types = sorted(list(set(n['type'] for n in sidebar_data['nodes'])))
+    selected_types = st.multiselect(
+        "categories:", 
+        all_types, 
+        default=all_types,
+        help="filter nodes by category"
+    )
+    
+    st.divider()
+    
+    # Sélection du modèle (nouveauté V6)
+    st.subheader("🤖 ai model")
+    gemini_model = st.selectbox(
+        "gemini model",
+        options=["gemini-3-flash-preview", "gemini-3-pro-preview"],
+        index=0 if st.session_state.gemini_model == "gemini-3-flash-preview" else 1,
+        help="Flash: rapide, Pro: plus précis et inférences avancées"
+    )
+    
+    # Mettre à jour le modèle si changé
+    if gemini_model != st.session_state.gemini_model:
+        st.session_state.gemini_model = gemini_model
+        st.session_state.graph_data = None  # Reset pour forcer nouvelle analyse
+        st.info("💡 Modèle changé. Uploadez à nouveau votre CV pour réanalyser.")
+    
+    st.caption("💡 Pro recommandé pour graphes plus précis (relationships technologiques)")
+    
+    st.divider()
+    
+    # Contrôles d'espacement (forces ULTRA renforcées pour éviter chevauchement labels)
+    spacing_configs = {
+        "Compact": {"gravity": -20000, "spring": 350},     # Augmenté encore
+        "Normal": {"gravity": -40000, "spring": 500},      # Augmenté encore
+        "Large": {"gravity": -70000, "spring": 700},       # Augmenté encore
+        "Extra Large": {"gravity": -110000, "spring": 950},   # Augmenté encore
+        "Ultra Wide": {"gravity": -160000, "spring": 1300},   # Augmenté encore
+        "Mega Wide": {"gravity": -250000, "spring": 1800}     # EXTRÊME pour aucun chevauchement
+    }
+    
+    with st.expander("⚙️ node spacing", expanded=False):
+        spacing_level = st.select_slider(
+            "spacing level",
+            options=["Compact", "Normal", "Large", "Extra Large", "Ultra Wide", "Mega Wide"],
+            value="Ultra Wide",  # Défaut augmenté à Ultra Wide
+            help="adjust space between nodes to avoid overlaps"
+        )
+        
+        show_edge_labels = st.checkbox(
+            "show relationshipship labels", 
+            value=False,
+            help="hiding labels can improve readability"
+        )
+        
+        st.caption(f"💡 for very dense graphs (30+ nodes), use 'Ultra Wide' ou 'Mega Wide'")
+    
+    st.divider()
+    
+    # Mode debug (nouveauté)
+    debug_mode = st.checkbox(
+        "🔍 Mode Debug", 
+        value=False,
+        help="Affiche les données brutes extraites par Gemini"
+    )
+    
+    st.divider()
+    
+    # Mode focus
+    if st.session_state.focused_node:
+        focused_info = next((n for n in sidebar_data['nodes'] if n['id'] == st.session_state.focused_node), None)
+        if focused_info:
+            st.info(f"🎯 Focus: **{focused_info['label']}**")
+            if st.button("🔄 reset focus", use_container_width=True):
+                st.session_state.focused_node = None
+                st.rerun()
+            st.divider()
+    
+    # Statistiques
+    st.subheader("📊 statistics")
+    filtered_nodes_data = [n for n in sidebar_data['nodes'] if n['type'] in selected_types]
+    filtered_node_ids = [n['id'] for n in filtered_nodes_data]
+    filtered_edges_data = [
+        e for e in sidebar_data['edges'] 
+        if e['from'] in filtered_node_ids and e['to'] in filtered_node_ids
+    ]
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        st.metric("nodes", len(filtered_nodes_data))
+    with col2:
+        st.metric("relationships", len(filtered_edges_data))
+    
+    # density du graphe (relationships par nœud)
+    if len(filtered_nodes_data) > 0:
+        density = len(filtered_edges_data) / len(filtered_nodes_data)
+        st.metric(
+            "density", 
+            f"{density:.1f}",
+            help="Nombre moyen de relationships par nœud. a dense graph has > 1.5"
+        )
+        
+        # Indicateur visuel de qualité
+        if density >= 2.0:
+            st.success("🌟 highly interconnected graph")
+        elif density >= 1.5:
+            st.info("✅ good interconnection")
+        else:
+            st.warning("⚠️ sparsely connected graph")
+    
+    st.divider()
+    
+    # Debug info (si activé)
+    if debug_mode:
+        st.subheader("🔍 debug info")
+        
+        with st.expander("📊 statistics Détaillées", expanded=True):
+            st.write(f"**nodes totaux extraits** : {len(sidebar_data['nodes'])}")
+            st.write(f"**relationships totales extraites** : {len(sidebar_data['edges'])}")
+            
+            # distribution by type
+            node_types = {}
+            for node in sidebar_data['nodes']:
+                node_type = node['type']
+                node_types[node_type] = node_types.get(node_type, 0) + 1
+            
+            st.write("**distribution by type** :")
+            for node_type, count in sorted(node_types.items()):
+                st.write(f"  - {node_type}: {count}")
+        
+        with st.expander("📋 Liste Complète des nodes", expanded=False):
+            for node in sorted(sidebar_data['nodes'], key=lambda x: x.get('importance', 0), reverse=True):
+                st.write(f"**{node['label']}** ({node['type']}) - Importance: {node.get('importance', '?')}/10")
+                st.write(f"  ID: `{node['id']}`")
+                # Compter les connexions
+                connections = sum(1 for e in sidebar_data['edges'] if e['from'] == node['id'] or e['to'] == node['id'])
+                st.write(f"  Connexions: {connections}")
+                st.caption("")  # Espacement
+        
+        with st.expander("🔗 Liste Complète des relationships", expanded=False):
+            for edge in sidebar_data['edges']:
+                from_node = next((n for n in sidebar_data['nodes'] if n['id'] == edge['from']), None)
+                to_node = next((n for n in sidebar_data['nodes'] if n['id'] == edge['to']), None)
+                if from_node and to_node:
+                    st.write(f"{from_node['label']} **{edge.get('label', '→')}** {to_node['label']}")
+        
+        with st.expander("💻 JSON Brut", expanded=False):
+            st.json(sidebar_data)
+        
+        st.divider()
+    
+    # Barre de recherche (nouveauté V6)
+    st.subheader("🔎 Recherche de Nœud")
+    search_query = st.text_input(
+        "Nom du nœud",
+        placeholder="Ex: PHP, Python, wp2md...",
+        help="Recherche case-insensitive dans les labels",
+        key="node_search"
+    )
+    
+    if search_query:
+        matching_nodes = [
+            n for n in sidebar_data['nodes'] 
+            if search_query.lower() in n['label'].lower()
+        ]
+        
+        if matching_nodes:
+            st.success(f"✅ {len(matching_nodes)} nœud(s) trouvé(s)")
+            
+            for node in matching_nodes:
+                # Badge avec type et importance
+                badge = f"{node['type']} • {node.get('importance', '?')}/10"
+                connections_count = sum(1 for e in sidebar_data['edges'] if e['from'] == node['id'] or e['to'] == node['id'])
+                
+                col1, col2 = st.columns([3, 1])
+                with col1:
+                    st.write(f"**{node['label']}**")
+                    st.caption(f"{badge} • {connections_count} connexions")
+                with col2:
+                    if st.button("📍", key=f"focus_{node['id']}", help="Focus sur ce nœud"):
+                        st.session_state.focused_node = node['id']
+                        st.rerun()
+            
+            # Auto-focus si un seul résultat
+            if len(matching_nodes) == 1 and st.session_state.focused_node != matching_nodes[0]['id']:
+                st.info("💡 click 📍 to activate focus")
+        else:
+            st.warning("❌ no matching nodes")
+    else:
+        st.caption("💡 type a name to search un nœud spécifique")
+    
+    st.divider()
+    
+    st.divider()
+    
+    # Légende des couleurs
+    st.subheader("🎨 legend")
+    color_map = {
+        "Person": "#FF4B4B",   # Rouge
+        "Role": "#F39C12",     # Orange
+        "Skill": "#00ADEE",    # Bleu
+        "Project": "#2ECC71",  # Vert
+        "Entity": "#9B59B6",   # Violet
+        "Concept": "#95A5A6"   # Gris
+    }
+    
+    for node_type in all_types:
+        color = color_map.get(node_type, "#BDC3C7")
+        count = sum(1 for n in sidebar_data['nodes'] if n['type'] == node_type)
+        st.markdown(
+            f'<span style="color:{color}; font-size:20px;">●</span> **{node_type}** ({count})',
+            unsafe_allow_html=True
+        )
+    
+    st.divider()
+    
+    # Container pour les détails au clic
+    details_container = st.empty()
+
 # Show main app block either when we have graph data, when a file was uploaded,
 # or when the uploader was explicitly requested by the user (show_uploader).
 if uploaded_file or st.session_state.graph_data is not None or st.session_state.show_uploader:
@@ -750,282 +1026,7 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
                 }
             )
 
-            # --- 2. BARRE LATÉRALE ET FILTRAGE ---
-            with st.sidebar:
-                # Conditional File Uploader
-                uploaded_file = None
-                if st.session_state.show_uploader:
-                    uploaded_file = st.file_uploader(
-                        "Upload Your CV (PDF)", 
-                        type=['pdf'],
-                        help="The file will be analyzed by Gemini to extract skills, projects and relationships"
-                    )
-                    if st.button("❌ Cancel Upload", use_container_width=True):
-                        st.session_state.show_uploader = False
-                        st.rerun()
-                elif st.session_state.graph_data is not None and st.session_state.demo_loaded:
-                    # Only show the trigger button if we are in demo mode or just starting
-                    if st.button("🚀 Upload Your Own CV", use_container_width=True):
-                        st.session_state.graph_data = None
-                        st.session_state.show_uploader = True
-                        st.rerun()
-                elif st.session_state.graph_data is None and not st.session_state.demo_loaded and not st.session_state.show_uploader:
-                    if st.button("🚀 Upload Your Own CV", use_container_width=True):
-                        st.session_state.show_uploader = True
-                        st.session_state.graph_data = None
-                        st.rerun()
-                
-                st.divider()
-                st.header("🎨 visualization")
-                
-                # Sélecteur de mode de visualisation (NOUVEAU V7)
-                viz_mode = st.radio(
-                    "display mode",
-                    options=["Network Graph", "Flow Diagram", "Skills Matrix"],
-                    key="viz_mode",  # ← FIX: Lie directement à st.session_state.viz_mode
-                    help="choose how to visualize your skills graph"
-                )
-                
-                # Reset focus when changing views (track previous mode)
-                if "prev_viz_mode" not in st.session_state:
-                    st.session_state.prev_viz_mode = viz_mode
-                
-                if viz_mode != st.session_state.prev_viz_mode:
-                    st.session_state.focused_node = None
-                    st.session_state.prev_viz_mode = viz_mode
-                
-                # Description des modes
-                if viz_mode == "Network Graph":
-                    st.caption("🕸️ **interactive exploration**: Click nodes to explore connections")
-                elif viz_mode == "Flow Diagram":
-                    st.caption("🌊 **flow view** : follow your skills journey to your projects")
-                else:
-                    st.caption("📊 **matrix view** : quick overview of which projects use which skills")
-                
-                st.divider()
-                
-                st.header("🔍 filters")
-                
-                all_types = sorted(list(set(n['type'] for n in data['nodes'])))
-                selected_types = st.multiselect(
-                    "categories:", 
-                    all_types, 
-                    default=all_types,
-                    help="filter nodes by category"
-                )
-                
-                st.divider()
-                
-                # Sélection du modèle (nouveauté V6)
-                st.subheader("🤖 ai model")
-                gemini_model = st.selectbox(
-                    "gemini model",
-                    options=["gemini-3-flash-preview", "gemini-3-pro-preview"],
-                    index=0 if st.session_state.gemini_model == "gemini-3-flash-preview" else 1,
-                    help="Flash: rapide, Pro: plus précis et inférences avancées"
-                )
-                
-                # Mettre à jour le modèle si changé
-                if gemini_model != st.session_state.gemini_model:
-                    st.session_state.gemini_model = gemini_model
-                    st.session_state.graph_data = None  # Reset pour forcer nouvelle analyse
-                    st.info("💡 Modèle changé. Uploadez à nouveau votre CV pour réanalyser.")
-                
-                st.caption("💡 Pro recommandé pour graphes plus précis (relationships technologiques)")
-                
-                st.divider()
-                
-                # Contrôles d'espacement (forces ULTRA renforcées pour éviter chevauchement labels)
-                spacing_configs = {
-                    "Compact": {"gravity": -20000, "spring": 350},     # Augmenté encore
-                    "Normal": {"gravity": -40000, "spring": 500},      # Augmenté encore
-                    "Large": {"gravity": -70000, "spring": 700},       # Augmenté encore
-                    "Extra Large": {"gravity": -110000, "spring": 950},   # Augmenté encore
-                    "Ultra Wide": {"gravity": -160000, "spring": 1300},   # Augmenté encore
-                    "Mega Wide": {"gravity": -250000, "spring": 1800}     # EXTRÊME pour aucun chevauchement
-                }
-                
-                with st.expander("⚙️ node spacing", expanded=False):
-                    spacing_level = st.select_slider(
-                        "spacing level",
-                        options=["Compact", "Normal", "Large", "Extra Large", "Ultra Wide", "Mega Wide"],
-                        value="Ultra Wide",  # Défaut augmenté à Ultra Wide
-                        help="adjust space between nodes to avoid overlaps"
-                    )
-                    
-                    show_edge_labels = st.checkbox(
-                        "show relationshipship labels", 
-                        value=False,
-                        help="hiding labels can improve readability"
-                    )
-                    
-                    st.caption(f"💡 for very dense graphs (30+ nodes), use 'Ultra Wide' ou 'Mega Wide'")
-                
-                st.divider()
-                
-                # Mode debug (nouveauté)
-                debug_mode = st.checkbox(
-                    "🔍 Mode Debug", 
-                    value=False,
-                    help="Affiche les données brutes extraites par Gemini"
-                )
-                
-                st.divider()
-                
-                # Mode focus
-                if st.session_state.focused_node:
-                    focused_info = next((n for n in data['nodes'] if n['id'] == st.session_state.focused_node), None)
-                    if focused_info:
-                        st.info(f"🎯 Focus: **{focused_info['label']}**")
-                        if st.button("🔄 reset focus", use_container_width=True):
-                            st.session_state.focused_node = None
-                            st.rerun()
-                        st.divider()
-                
-                # Statistiques
-                st.subheader("📊 statistics")
-                filtered_nodes_data = [n for n in data['nodes'] if n['type'] in selected_types]
-                filtered_node_ids = [n['id'] for n in filtered_nodes_data]
-                filtered_edges_data = [
-                    e for e in data['edges'] 
-                    if e['from'] in filtered_node_ids and e['to'] in filtered_node_ids
-                ]
-                
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.metric("nodes", len(filtered_nodes_data))
-                with col2:
-                    st.metric("relationships", len(filtered_edges_data))
-                
-                # density du graphe (relationships par nœud)
-                if len(filtered_nodes_data) > 0:
-                    density = len(filtered_edges_data) / len(filtered_nodes_data)
-                    st.metric(
-                        "density", 
-                        f"{density:.1f}",
-                        help="Nombre moyen de relationships par nœud. a dense graph has > 1.5"
-                    )
-                    
-                    # Indicateur visuel de qualité
-                    if density >= 2.0:
-                        st.success("🌟 highly interconnected graph")
-                    elif density >= 1.5:
-                        st.info("✅ good interconnection")
-                    else:
-                        st.warning("⚠️ sparsely connected graph")
-                
-                st.divider()
-                
-                # Debug info (si activé)
-                if debug_mode:
-                    st.subheader("🔍 debug info")
-                    
-                    with st.expander("📊 statistics Détaillées", expanded=True):
-                        st.write(f"**nodes totaux extraits** : {len(data['nodes'])}")
-                        st.write(f"**relationships totales extraites** : {len(data['edges'])}")
-                        
-                        # distribution by type
-                        node_types = {}
-                        for node in data['nodes']:
-                            node_type = node['type']
-                            node_types[node_type] = node_types.get(node_type, 0) + 1
-                        
-                        st.write("**distribution by type** :")
-                        for node_type, count in sorted(node_types.items()):
-                            st.write(f"  - {node_type}: {count}")
-                    
-                    with st.expander("📋 Liste Complète des nodes", expanded=False):
-                        for node in sorted(data['nodes'], key=lambda x: x.get('importance', 0), reverse=True):
-                            st.write(f"**{node['label']}** ({node['type']}) - Importance: {node.get('importance', '?')}/10")
-                            st.write(f"  ID: `{node['id']}`")
-                            # Compter les connexions
-                            connections = sum(1 for e in data['edges'] if e['from'] == node['id'] or e['to'] == node['id'])
-                            st.write(f"  Connexions: {connections}")
-                            st.caption("")  # Espacement
-                    
-                    with st.expander("🔗 Liste Complète des relationships", expanded=False):
-                        for edge in data['edges']:
-                            from_node = next((n for n in data['nodes'] if n['id'] == edge['from']), None)
-                            to_node = next((n for n in data['nodes'] if n['id'] == edge['to']), None)
-                            if from_node and to_node:
-                                st.write(f"{from_node['label']} **{edge.get('label', '→')}** {to_node['label']}")
-                    
-                    with st.expander("💻 JSON Brut", expanded=False):
-                        st.json(data)
-                    
-                    st.divider()
-                
-                # Barre de recherche (nouveauté V6)
-                st.subheader("🔎 Recherche de Nœud")
-                search_query = st.text_input(
-                    "Nom du nœud",
-                    placeholder="Ex: PHP, Python, wp2md...",
-                    help="Recherche case-insensitive dans les labels",
-                    key="node_search"
-                )
-                
-                if search_query:
-                    matching_nodes = [
-                        n for n in data['nodes'] 
-                        if search_query.lower() in n['label'].lower()
-                    ]
-                    
-                    if matching_nodes:
-                        st.success(f"✅ {len(matching_nodes)} nœud(s) trouvé(s)")
-                        
-                        for node in matching_nodes:
-                            # Badge avec type et importance
-                            badge = f"{node['type']} • {node.get('importance', '?')}/10"
-                            connections_count = sum(1 for e in data['edges'] if e['from'] == node['id'] or e['to'] == node['id'])
-                            
-                            col1, col2 = st.columns([3, 1])
-                            with col1:
-                                st.write(f"**{node['label']}**")
-                                st.caption(f"{badge} • {connections_count} connexions")
-                            with col2:
-                                if st.button("📍", key=f"focus_{node['id']}", help="Focus sur ce nœud"):
-                                    st.session_state.focused_node = node['id']
-                                    st.rerun()
-                        
-                        # Auto-focus si un seul résultat
-                        if len(matching_nodes) == 1 and st.session_state.focused_node != matching_nodes[0]['id']:
-                            st.info("💡 click 📍 to activate focus")
-                    else:
-                        st.warning("❌ no matching nodes")
-                else:
-                    st.caption("💡 type a name to search un nœud spécifique")
-                
-                st.divider()
-                
-                st.divider()
-                
-                # Légende des couleurs
-                st.subheader("🎨 legend")
-                color_map = {
-                    "Person": "#FF4B4B",   # Rouge
-                    "Role": "#F39C12",     # Orange
-                    "Skill": "#00ADEE",    # Bleu
-                    "Project": "#2ECC71",  # Vert
-                    "Entity": "#9B59B6",   # Violet
-                    "Concept": "#95A5A6"   # Gris
-                }
-                
-                for node_type in all_types:
-                    color = color_map.get(node_type, "#BDC3C7")
-                    count = sum(1 for n in data['nodes'] if n['type'] == node_type)
-                    st.markdown(
-                        f'<span style="color:{color}; font-size:20px;">●</span> **{node_type}** ({count})',
-                        unsafe_allow_html=True
-                    )
-                
-                st.divider()
-                
-
-                
-                st.divider()
-                
-                # Container pour les détails au clic
-                details_container = st.empty()
+            
 
             # --- 1. DÉFINITION DE LA CONFIGURATION (après récupération des paramètres) ---
             # Récupérer les paramètres d'espacement
