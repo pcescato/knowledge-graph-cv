@@ -1118,7 +1118,12 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
                     - Les **couleurs** represent different categories
                     """)
                 
-                clicked_node_id = agraph(nodes=nodes, edges=edges, config=config)
+                clicked_node_id = None
+                
+                # Center the graph using columns
+                col_left, col_center, col_right = st.columns([0.5, 9, 0.5])
+                with col_center:
+                    clicked_node_id = agraph(nodes=nodes, edges=edges, config=config)
 
                 # --- 5. GESTION DU CLIC (Activation du mode focus) ---
                 if clicked_node_id and clicked_node_id != st.session_state.focused_node:
@@ -1183,7 +1188,11 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
                 }
                 
                 sankey_fig = create_sankey_diagram(filtered_data)
-                st.plotly_chart(sankey_fig, use_container_width=True)
+                
+                # Center the diagram using columns
+                col_left, col_center, col_right = st.columns([0.5, 9, 0.5])
+                with col_center:
+                    st.plotly_chart(sankey_fig, use_container_width=True)
                 
                 # Stats rapides
                 col1, col2, col3 = st.columns(3)
@@ -1217,7 +1226,10 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
                 matrix_fig = create_skills_matrix(filtered_data)
                 
                 if matrix_fig:
-                    st.plotly_chart(matrix_fig, use_container_width=True)
+                    # Center the matrix using columns
+                    col_left, col_center, col_right = st.columns([0.5, 9, 0.5])
+                    with col_center:
+                        st.plotly_chart(matrix_fig, use_container_width=True)
                     
                     # Insights
                     skills = [n for n in filtered_data['nodes'] if n['type'] == 'Skill']
