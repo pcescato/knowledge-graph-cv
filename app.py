@@ -2,6 +2,7 @@ import streamlit as st
 import google.generativeai as genai
 import os
 import json
+import re  # Added for robust JSON parsing
 from streamlit_agraph import agraph, Node, Edge, Config
 from dotenv import load_dotenv
 import plotly.graph_objects as go
@@ -919,6 +920,15 @@ with st.sidebar:
 if uploaded_file or st.session_state.graph_data is not None or st.session_state.show_uploader:
     # --- PHASE D'ANALYSE (Seulement si pas déjà en mémoire) ---
     if uploaded_file and st.session_state.graph_data is None:
+        
+        # FIX 1: Validate file size before processing (max 10MB)
+        MAX_UPLOAD_SIZE = 10 * 1024 * 1024  # 10MB
+        file_size = uploaded_file.size if hasattr(uploaded_file, 'size') else len(uploaded_file.getvalue())
+        
+        if file_size > MAX_UPLOAD_SIZE:
+            st.error(f"❌ File too large ({file_size/(1024*1024):.1f}MB). Maximum: 10MB")
+            st.info("💡 Try compressing your PDF or removing unnecessary pages")
+            st.stop()
 
         with st.spinner("🔍 Gemini analysis in progress..."):
             file_bytes = uploaded_file.read()
@@ -928,6 +938,7 @@ if uploaded_file or st.session_state.graph_data is not None or st.session_state.
             model = genai.GenerativeModel(f'models/{selected_model}', system_instruction=SYSTEM_PROMPT)
             
             try:
+                # FIX 2: Better error handling for Gemini API calls
                 response = model.generate_content([
                     {"mime_type": "application/pdf", "data": file_bytes},
                     """Extract a COMPREHENSIVE and DENSE knowledge graph with maximum interconnections.
@@ -974,11 +985,57 @@ Quality over quantity, but PRIORITIZE COMPLETENESS and DENSITY of interconnectio
 Do not artificially limit yourself to "top N" items - extract everything relevant."""
                 ])
                 
-                # Nettoyage de la réponse
-                clean_json = response.text.replace("```json", "").replace("```", "").strip()
+                # FIX 3: Robust JSON parsing with multiple fallback strategies
+                raw_data = None
                 
-                # Parsing et validation
-                raw_data = json.loads(clean_json)
+                # Strategy 1: Try direct parsing (if Gemini returns clean JSON)
+                try:
+                    raw_data = json.loads(response.text)
+                except json.JSONDecodeError:
+                    # Strategy 2: Try after removing markdown code blocks
+                    try:
+                        clean_json = response.text.replace("```json", "").replace("```", "").strip()
+                        raw_data = json.loads(clean_json)
+                    except json.JSONDecodeError:
+                        # Strategy 3: Extract JSON using regex (find first {...} block)
+                        try:
+                            # Find ```json ... ``` block
+                            match = re.search(r'```json\s*(\{.*?\})\s*```', response.text, re.DOTALL)
+                            if match:
+                                raw_data = json.loads(match.group(1))
+                            else:
+                                # Find first { ... } balanced block
+                                match = re.search(r'\{.*\}', response.text, re.DOTALL)
+                                if match:
+                                    raw_data = json.loads(match.group(0))
+                        except (json.JSONDecodeError, AttributeError):
+                            pass
+                
+                # If all parsing strategies failed
+                if raw_data is None:
+                    st.error("❌ Could not parse JSON from Gemini response")
+                    st.code(response.text[:1000])  # Show first 1000 chars
+                    st.stop()
+                
+                # FIX 4: Validate JSON structure
+                if not isinstance(raw_data, dict):
+                    st.error("❌ Invalid JSON structure: expected object, got " + type(raw_data).__name__)
+                    st.stop()
+                
+                if 'nodes' not in raw_data or 'edges' not in raw_data:
+                    st.error("❌ Invalid JSON structure: missing 'nodes' or 'edges' keys")
+                    st.code(json.dumps(raw_data, indent=2)[:1000])
+                    st.stop()
+                
+                if not isinstance(raw_data['nodes'], list) or not isinstance(raw_data['edges'], list):
+                    st.error("❌ Invalid JSON structure: 'nodes' and 'edges' must be arrays")
+                    st.stop()
+                
+                if len(raw_data['nodes']) == 0:
+                    st.warning("⚠️ No nodes extracted from CV. Try a different model or check your PDF.")
+                    st.stop()
+                
+                # All validation passed, enhance and store
                 st.session_state.graph_data = validate_and_enhance_graph(raw_data)
                 st.session_state.show_uploader = False
                 
@@ -987,11 +1044,28 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
                 st.rerun()
                 
             except json.JSONDecodeError as e:
-                st.error(f"❌ json parsing error : {e}")
-                st.code(response.text)
+                st.error(f"❌ JSON parsing error: {e}")
+                st.code(response.text[:1000] if 'response' in locals() else "No response received")
                 st.stop()
             except Exception as e:
-                st.error(f"❌ Erreur lors de l'analyse : {e}")
+                error_msg = str(e).lower()
+                
+                # FIX 2: Better error messages for common Gemini API issues
+                if 'rate limit' in error_msg or '429' in error_msg:
+                    st.error("❌ Rate limit exceeded")
+                    st.info("💡 Wait a few minutes before trying again, or switch to a different API key")
+                elif 'timeout' in error_msg or 'deadline' in error_msg:
+                    st.error("❌ Request timeout")
+                    st.info("💡 Your PDF might be too complex. Try a shorter CV or try again.")
+                elif 'quota' in error_msg:
+                    st.error("❌ API quota exceeded")
+                    st.info("💡 Check your Google AI Studio quota: https://aistudio.google.com/")
+                elif 'api key' in error_msg or 'authentication' in error_msg:
+                    st.error("❌ API authentication failed")
+                    st.info("💡 Check your GOOGLE_API_KEY in .env file")
+                else:
+                    st.error(f"❌ Analysis error: {e}")
+                    st.info("💡 Try again or contact support if the problem persists")
                 st.stop()
 
     # --- PHASE D'AFFICHAGE (Interactive) ---
