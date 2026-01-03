@@ -635,6 +635,8 @@ st.markdown("""
 
 # Quick Start instructions
 
+# Safety: ensure uploaded_file is defined before first use to avoid NameError
+uploaded_file = None
 
 if uploaded_file or st.session_state.graph_data is not None:
     # --- PHASE D'ANALYSE (Seulement si pas déjà en mémoire) ---
