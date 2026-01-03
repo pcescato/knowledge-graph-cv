@@ -619,11 +619,33 @@ st.set_page_config(
 st.title("🌐 AI Knowledge Graph CV Builder")
 st.markdown("*Transform your resume into an interactive knowledge graph powered by AI*")
 
+# Hero message - philosophical positioning
+st.markdown("""
+<div style='text-align: center; padding: 15px 0 25px 0; max-width: 800px; margin: 0 auto;'>
+    <p style='color: #666; font-size: 1.1em; line-height: 1.6; font-weight: 300;'>
+        Professional journeys aren't timelines.<br>
+        They're <strong>knowledge graphs</strong>.
+    </p>
+</div>
+""", unsafe_allow_html=True)
+
 uploaded_file = st.file_uploader(
     "Upload Your CV (PDF)", 
     type=['pdf'],
     help="The file will be analyzed by Gemini to extract skills, projects and relationships"
 )
+
+# Quick Start instructions
+st.markdown("""
+<div style='background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0;'>
+    <p style='margin: 0 0 10px 0; color: #555; font-weight: 500;'>💡 Quick Start</p>
+    <p style='margin: 5px 0; color: #666; font-size: 0.95em;'>
+        <strong>1️⃣</strong> Explore my CV (already loaded as demo)<br>
+        <strong>2️⃣</strong> Switch between 3 views in the sidebar<br>
+        <strong>3️⃣</strong> Upload your own PDF to try it
+    </p>
+</div>
+""", unsafe_allow_html=True)
 
 if uploaded_file or st.session_state.graph_data is not None:
     # --- PHASE D'ANALYSE (Seulement si pas déjà en mémoire) ---
@@ -1256,3 +1278,13 @@ else:
         - Skills gap identification
         - Professional storytelling
         """)
+
+# Footer - Credits and links
+st.markdown("---")
+st.markdown("""
+<div style='text-align: center; color: #888; font-size: 0.9em; padding: 20px 0;'>
+    Built with Streamlit, Gemini AI, and iterative refinement<br>
+    <a href='https://github.com/pcescato/knowledge-graph-cv' target='_blank' style='color: #0066cc; text-decoration: none;'>📂 View Source</a> | 
+    <a href='https://dev.to' target='_blank' style='color: #0066cc; text-decoration: none;'>📝 Read the Story</a>
+</div>
+""", unsafe_allow_html=True)
