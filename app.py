@@ -982,7 +982,9 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
                 st.session_state.graph_data = validate_and_enhance_graph(raw_data)
                 st.session_state.show_uploader = False
                 
+                # Indicate success and force a rerun so the main view updates immediately
                 st.success("✅ analysis completed!")
+                st.rerun()
                 
             except json.JSONDecodeError as e:
                 st.error(f"❌ json parsing error : {e}")
