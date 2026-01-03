@@ -54,7 +54,7 @@ Heatmap displaying:
 
 ### 🤖 AI-Powered Extraction
 
-- **Gemini Flash 2.0**: Multimodal PDF analysis
+- **Gemini Flash Preview 3.0**: Multimodal PDF analysis
 - **Dense graphs**: 60-80+ relationships extracted
 - **Semantic understanding**: Not just keywords—contextual connections
 - **~8 seconds**: From PDF upload to interactive graph
@@ -148,7 +148,7 @@ gcloud run deploy knowledge-graph-cv \
 
 ### AI & Data Processing
 
-- **Gemini Flash 2.0** (via Google AI API): PDF analysis & graph extraction
+- **Gemini Flash Preview 3.0** (via Google AI API): PDF analysis & graph extraction
 - **Google AI Studio**: Prompt engineering & testing
 
 ### Visualization
