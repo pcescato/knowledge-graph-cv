@@ -617,18 +617,19 @@ st.set_page_config(
 )
 
 st.title("🌐 AI Knowledge Graph CV Builder")
-st.markdown("*Transforme ton CV en graphe de connaissances interactif avec l'IA*")
+st.markdown("*Transform your resume into an interactive knowledge graph powered by AI*")
 
 uploaded_file = st.file_uploader(
-    "Dépose ton CV (PDF)", 
+    "Upload Your CV (PDF)", 
     type=['pdf'],
-    help="Le fichier sera analysé par Gemini pour extraire les compétences, projects et relationships"
+    help="The file will be analyzed by Gemini to extract skills, projects and relationships"
 )
 
-if uploaded_file:
+if uploaded_file or st.session_state.graph_data is not None:
     # --- PHASE D'ANALYSE (Seulement si pas déjà en mémoire) ---
-    if st.session_state.graph_data is None:
-        with st.spinner("🔍 Analyse par Gemini en cours..."):
+    if uploaded_file and st.session_state.graph_data is None:
+
+        with st.spinner("🔍 Gemini analysis in progress..."):
             file_bytes = uploaded_file.read()
             
             # Utiliser le modèle sélectionné
@@ -1230,26 +1231,26 @@ else:
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        st.markdown("### 🎯 Objectif")
+        st.markdown("### 🎯 Objective")
         st.markdown("""
-        Transforme ton CV statique en un **graphe de connaissances dynamique** 
-        qui met en évidence tes compétences, projects et leur interconnexions.
+        Transform your static resume into a **dynamic knowledge graph** 
+        that highlights your skills, projects and their interconnections.
         """)
     
     with col2:
-        st.markdown("### ⚡ Fonctionnalités")
+        st.markdown("### ⚡ Features")
         st.markdown("""
-        - Extraction automatique par IA (Gemini)
-        - Visualisation interactive
-        - Filtrage par catégories
-        - Analyse des relationships
+        - AI-powered automatic extraction (Gemini)
+        - Interactive visualization
+        - Filter by categories
+        - Relationship analysis
         """)
     
     with col3:
-        st.markdown("### 🚀 Cas d'usage")
+        st.markdown("### 🚀 Use Cases")
         st.markdown("""
-        - Portfolio interactif
-        - Préparation d'entretiens
-        - Identification de gaps de compétences
-        - Storytelling professionnel
+        - Interactive portfolio
+        - Interview preparation
+        - Skills gap identification
+        - Professional storytelling
         """)
