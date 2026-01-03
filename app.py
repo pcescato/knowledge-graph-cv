@@ -638,7 +638,9 @@ st.markdown("""
 # Safety: ensure uploaded_file is defined before first use to avoid NameError
 uploaded_file = None
 
-if uploaded_file or st.session_state.graph_data is not None:
+# Show main app block either when we have graph data, when a file was uploaded,
+# or when the uploader was explicitly requested by the user (show_uploader).
+if uploaded_file or st.session_state.graph_data is not None or st.session_state.show_uploader:
     # --- PHASE D'ANALYSE (Seulement si pas déjà en mémoire) ---
     if uploaded_file and st.session_state.graph_data is None:
 
