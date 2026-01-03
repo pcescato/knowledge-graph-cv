@@ -616,6 +616,22 @@ st.set_page_config(
     layout="wide"
 )
 
+
+# Force center alignment for iframe embeds
+st.markdown("""
+<style>
+    .main .block-container {
+        max-width: 1800px;
+        margin: 0 auto;
+    }
+    .stPlotlyChart {
+        display: flex;
+        justify-content: center;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+
 st.title("🌐 AI Knowledge Graph CV Builder")
 st.markdown("*Transform your resume into an interactive knowledge graph powered by AI*")
 
