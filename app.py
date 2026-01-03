@@ -629,14 +629,11 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# File uploader - only show when NOT in demo mode
-uploaded_file = None
-if not st.session_state.demo_loaded:
-    uploaded_file = st.file_uploader(
-        "Upload Your CV (PDF)", 
-        type=['pdf'],
-        help="The file will be analyzed by Gemini to extract skills, projects and relationships"
-    )
+uploaded_file = st.file_uploader(
+    "Upload Your CV (PDF)", 
+    type=['pdf'],
+    help="The file will be analyzed by Gemini to extract skills, projects and relationships"
+)
 
 # Quick Start instructions - only show in demo mode
 if st.session_state.demo_loaded:
@@ -646,7 +643,7 @@ if st.session_state.demo_loaded:
     <p style='margin: 5px 0; color: #666; font-size: 0.95em;'>
         <strong>1️⃣</strong> Explore my CV (already loaded as demo)<br>
         <strong>2️⃣</strong> Switch between 3 views in the sidebar<br>
-        <strong>3️⃣</strong> Click "Upload Your Own CV" in sidebar to try yours
+        <strong>3️⃣</strong> Click <strong>"Upload Your Own CV"</strong> in sidebar to try yours
     </p>
 </div>
 """, unsafe_allow_html=True)
@@ -797,23 +794,12 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
                 
                 st.divider()
                 
-                # CV Source Control - Clean version
-                st.header("📄 CV Source")
+                # Simple Upload Control
                 if st.session_state.demo_loaded:
-                    st.success("✅ Demo CV")
-                    if st.button("📤 Upload Your Own CV", use_container_width=True, type="primary"):
+                    st.info("📄 **Demo CV loaded**")
+                    if st.button("📤 Upload Your Own CV", use_container_width=True, type="primary", help="Clear demo to upload your CV"):
                         st.session_state.graph_data = None
                         st.session_state.demo_loaded = False
-                        st.rerun()
-                else:
-                    st.info("📤 Your CV")
-                    if st.button("🔙 Back to Demo", use_container_width=True):
-                        # Reload demo
-                        demo_path = os.path.join(os.path.dirname(__file__), "demo_cv_data.json")
-                        if os.path.exists(demo_path):
-                            with open(demo_path, 'r', encoding='utf-8') as f:
-                                st.session_state.graph_data = json.load(f)
-                                st.session_state.demo_loaded = True
                         st.rerun()
                 
                 st.divider()
