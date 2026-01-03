@@ -27,6 +27,8 @@ if "gemini_model" not in st.session_state:
     st.session_state.gemini_model = "gemini-3-flash-preview"
 if "viz_mode" not in st.session_state:
     st.session_state.viz_mode = "Network Graph"
+if "show_uploader" not in st.session_state:
+    st.session_state.show_uploader = False
 
 
 
@@ -629,23 +631,10 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-uploaded_file = st.file_uploader(
-    "Upload Your CV (PDF)", 
-    type=['pdf'],
-    help="The file will be analyzed by Gemini to extract skills, projects and relationships"
-)
+
 
 # Quick Start instructions
-st.markdown("""
-<div style='background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0;'>
-    <p style='margin: 0 0 10px 0; color: #555; font-weight: 500;'>💡 Quick Start</p>
-    <p style='margin: 5px 0; color: #666; font-size: 0.95em;'>
-        <strong>1️⃣</strong> Explore my CV (already loaded as demo)<br>
-        <strong>2️⃣</strong> Switch between 3 views in the sidebar<br>
-        <strong>3️⃣</strong> Upload your own PDF to try it
-    </p>
-</div>
-""", unsafe_allow_html=True)
+
 
 if uploaded_file or st.session_state.graph_data is not None:
     # --- PHASE D'ANALYSE (Seulement si pas déjà en mémoire) ---
@@ -711,6 +700,7 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
                 # Parsing et validation
                 raw_data = json.loads(clean_json)
                 st.session_state.graph_data = validate_and_enhance_graph(raw_data)
+                st.session_state.show_uploader = False
                 
                 st.success("✅ analysis completed!")
                 
@@ -758,6 +748,30 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
 
             # --- 2. BARRE LATÉRALE ET FILTRAGE ---
             with st.sidebar:
+                # Conditional File Uploader
+                uploaded_file = None
+                if st.session_state.show_uploader:
+                    uploaded_file = st.file_uploader(
+                        "Upload Your CV (PDF)", 
+                        type=['pdf'],
+                        help="The file will be analyzed by Gemini to extract skills, projects and relationships"
+                    )
+                    if st.button("❌ Cancel Upload", use_container_width=True):
+                        st.session_state.show_uploader = False
+                        st.rerun()
+                elif st.session_state.graph_data is not None and st.session_state.demo_loaded:
+                    # Only show the trigger button if we are in demo mode or just starting
+                    if st.button("🚀 Upload Your Own CV", use_container_width=True):
+                        st.session_state.graph_data = None
+                        st.session_state.show_uploader = True
+                        st.rerun()
+                elif st.session_state.graph_data is None and not st.session_state.demo_loaded and not st.session_state.show_uploader:
+                    if st.button("🚀 Upload Your Own CV", use_container_width=True):
+                        st.session_state.show_uploader = True
+                        st.session_state.graph_data = None
+                        st.rerun()
+                
+                st.divider()
                 st.header("🎨 visualization")
                 
                 # Sélecteur de mode de visualisation (NOUVEAU V7)
@@ -1002,10 +1016,7 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
                 
                 st.divider()
                 
-                # Bouton de réinitialisation
-                if st.button("🔄 upload your own cv", use_container_width=True):
-                    st.session_state.graph_data = None
-                    st.rerun()
+
                 
                 st.divider()
                 
@@ -1260,7 +1271,17 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
             
 else:
     # Message d'accueil
-    st.info("👆 upload your cv to start analysis")
+    if not st.session_state.show_uploader:
+        st.markdown("""
+        <div style='text-align: center; padding: 20px;'>
+            <h3 style='color: #333;'>Ready to visualize your career?</h3>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("🚀 Get Started: Upload Your CV", use_container_width=True):
+            st.session_state.show_uploader = True
+            st.rerun()
+    else:
+        st.info("👆 upload your cv to start analysis")
     
     st.markdown("---")
     
