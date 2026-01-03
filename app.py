@@ -613,7 +613,7 @@ def create_skills_matrix(data):
 st.set_page_config(
     page_title="AI Knowledge Graph CV Builder",
     page_icon="🌐",
-    layout="centered"
+    layout="wide"
 )
 
 st.title("🌐 AI Knowledge Graph CV Builder")
@@ -729,8 +729,8 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
         try:
             # --- 1. DÉFINITION DE LA CONFIGURATION ---
             config = Config(
-                width=1600,
-                height=1000,
+                width=1400,
+                height=900,
                 directed=True,
                 physics=True,
                 nodeHighlightBehavior=True,
