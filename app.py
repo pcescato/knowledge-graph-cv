@@ -742,19 +742,21 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
                 viz_mode = st.radio(
                     "display mode",
                     options=["Network Graph", "Flow Diagram", "Skills Matrix"],
-                    index=["Network Graph", "Flow Diagram", "Skills Matrix"].index(st.session_state.viz_mode),
+                    key="viz_mode",  # ← FIX: Lie directement à st.session_state.viz_mode
                     help="choose how to visualize your skills graph"
                 )
                 
-                # Mettre à jour le mode si changé
-                if viz_mode != st.session_state.viz_mode:
-                    st.session_state.viz_mode = viz_mode
-                    # reset focus si on change de vue
+                # Reset focus when changing views (track previous mode)
+                if "prev_viz_mode" not in st.session_state:
+                    st.session_state.prev_viz_mode = viz_mode
+                
+                if viz_mode != st.session_state.prev_viz_mode:
                     st.session_state.focused_node = None
+                    st.session_state.prev_viz_mode = viz_mode
                 
                 # Description des modes
                 if viz_mode == "Network Graph":
-                    st.caption("🕸️ **interactive exploration** : Cliquez sur les nodes pour explorer les connexions")
+                    st.caption("🕸️ **interactive exploration**: Click nodes to explore connections")
                 elif viz_mode == "Flow Diagram":
                     st.caption("🌊 **flow view** : follow your skills journey to your projects")
                 else:
