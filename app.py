@@ -649,6 +649,13 @@ st.markdown("""
 
 if uploaded_file or st.session_state.graph_data is not None:
     # --- PHASE D'ANALYSE (Seulement si pas déjà en mémoire) ---
+    
+    # Auto-reset demo when user uploads their own CV
+    if uploaded_file and st.session_state.graph_data is not None and st.session_state.demo_loaded:
+        st.session_state.graph_data = None
+        st.session_state.demo_loaded = False
+        st.rerun()
+    
     if uploaded_file and st.session_state.graph_data is None:
 
         with st.spinner("🔍 Gemini analysis in progress..."):
@@ -729,8 +736,8 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
         try:
             # --- 1. DÉFINITION DE LA CONFIGURATION ---
             config = Config(
-                width=1400,
-                height=900,
+                width=1600,
+                height=1000,
                 directed=True,
                 physics=True,
                 nodeHighlightBehavior=True,
@@ -783,6 +790,27 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
                     st.caption("🌊 **flow view** : follow your skills journey to your projects")
                 else:
                     st.caption("📊 **matrix view** : quick overview of which projects use which skills")
+                
+                st.divider()
+                
+                # CV Source Control (NEW - helps users understand demo vs own CV)
+                st.header("📄 CV Source")
+                if st.session_state.demo_loaded:
+                    st.success("✅ Demo CV (Pascal Cescato)")
+                    if st.button("🔄 Upload Your Own", use_container_width=True, help="Clear demo and upload your CV"):
+                        st.session_state.graph_data = None
+                        st.session_state.demo_loaded = False
+                        st.rerun()
+                else:
+                    st.info("📤 Your CV Loaded")
+                    if st.button("🔙 Back to Demo", use_container_width=True, help="Reload demo CV"):
+                        # Reload demo
+                        demo_path = os.path.join(os.path.dirname(__file__), "demo_cv_data.json")
+                        if os.path.exists(demo_path):
+                            with open(demo_path, 'r', encoding='utf-8') as f:
+                                st.session_state.graph_data = json.load(f)
+                                st.session_state.demo_loaded = True
+                        st.rerun()
                 
                 st.divider()
                 
