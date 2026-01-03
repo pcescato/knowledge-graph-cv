@@ -15,6 +15,7 @@ Professional journeys aren't timelines—they're networks of interconnected skil
 ## 🎯 Why This Project?
 
 Traditional CVs are **chronological and linear**. They work well for continuous trajectories but fail to represent:
+
 - Non-linear career paths
 - Cross-domain expertise
 - Technology interconnections
@@ -27,31 +28,39 @@ This project reimagines professional identity as a **knowledge graph**: nodes (s
 ## ✨ Features
 
 ### 🕸️ Network Graph
+
 Interactive force-directed graph with:
+
 - **Click-to-focus**: Highlight direct connections
 - **Color-coded nodes**: Skills (blue), Projects (green), Concepts (gray)
 - **Dynamic filtering**: Filter by category
 - **Adjustable spacing**: 6 levels from Compact to Mega Wide
 
 ### 🌊 Flow Diagram
+
 Sankey visualization showing:
+
 - **Skills → Projects → Expertise** flow
 - **Weighted connections**: Band thickness = importance
 - **Visual narrative**: Tell your career story
 
 ### 📊 Skills Matrix
+
 Heatmap displaying:
+
 - **Project × Skill relationships**
 - **Quick scanning**: See which projects use which technologies
 - **Insights**: Most-used skill, average skills per project
 
 ### 🤖 AI-Powered Extraction
+
 - **Gemini Flash 2.0**: Multimodal PDF analysis
 - **Dense graphs**: 60-80+ relationships extracted
 - **Semantic understanding**: Not just keywords—contextual connections
 - **~8 seconds**: From PDF upload to interactive graph
 
 ### 🎨 User Experience
+
 - **Demo pre-loaded**: My CV ready to explore (zero friction)
 - **Multi-view dashboard**: 3 perspectives on the same data
 - **Responsive controls**: Collapsible sidebar, adjustable spacing
@@ -138,16 +147,19 @@ gcloud run deploy knowledge-graph-cv \
 ## 🧰 Tech Stack
 
 ### AI & Data Processing
+
 - **Gemini Flash 2.0** (via Google AI API): PDF analysis & graph extraction
 - **Google AI Studio**: Prompt engineering & testing
 
 ### Visualization
+
 - **Streamlit**: Web framework & UI
 - **streamlit-agraph**: Network graph (vis.js wrapper)
 - **Plotly**: Sankey diagrams & heatmaps
 - **NetworkX**: Graph algorithms & validation
 
 ### Deployment
+
 - **Google Cloud Run**: Serverless container deployment
 - **Docker**: Containerization
 
@@ -176,6 +188,7 @@ PDF Upload → Gemini API → JSON Graph → Multi-View Dashboard
 ```
 
 **Relationship types**:
+
 - `MASTERS`, `USES`, `CREATES`: Direct actions
 - `ENABLES`, `REQUIRES`, `BUILT_WITH`: Technical dependencies
 - `DEMONSTRATES`, `IMPLEMENTED_IN`: Conceptual connections
@@ -189,11 +202,11 @@ PDF Upload → Gemini API → JSON Graph → Multi-View Dashboard
 
 I evaluated several libraries for the interactive Network Graph:
 
-| Library | Interactivity | Responsive | Dev Time | 
-|---------|--------------|-----------|----------|
-| **streamlit-agraph** ✅ | Excellent | Fixed (1400px) | 2 hours |
-| Plotly Graph Objects | Limited | 100% responsive | 6 hours |
-| D3.js Custom | Full control | 100% responsive | 8+ hours |
+| Library                | Interactivity | Responsive      | Dev Time |
+| ---------------------- | ------------- | --------------- | -------- |
+| **streamlit-agraph** ✅ | Excellent     | Fixed (1400px)  | 2 hours  |
+| Plotly Graph Objects   | Limited       | 100% responsive | 6 hours  |
+| D3.js Custom           | Full control  | 100% responsive | 8+ hours |
 
 **Decision**: streamlit-agraph
 
@@ -204,6 +217,7 @@ I evaluated several libraries for the interactive Network Graph:
 ### Why 3 Visualizations?
 
 **Different audiences need different views**:
+
 - **Developers**: Want to explore connections (Network Graph)
 - **Recruiters**: Need quick visual narratives (Flow Diagram)
 - **Managers**: Want fast skill scanning (Skills Matrix)
@@ -215,14 +229,16 @@ One visualization can't serve all needs.
 ## 📊 Project Metrics
 
 ### Technical
+
 - **Nodes**: 25-35 (average per CV)
 - **Relationships**: 60-80 (average)
 - **Density**: 2.0-2.8 edges/node
-- **Extraction Time**: ~8 seconds (Gemini Flash)
+- **Extraction Time**: ~20 seconds (Gemini Flash Preview 3.0)
 - **Supported Formats**: PDF only
 - **Visualizations**: 3 modes
 
 ### Development
+
 - **Versions**: V1 → V8.3 (8 major iterations)
 - **Prompt iterations**: 20+ (Google AI Studio)
 - **User feedback cycles**: Multiple
@@ -254,6 +270,7 @@ The system doesn't just extract keywords—it reasons about context:
 **Example**: "Built a WordPress migration tool in Python"
 
 **Extracted graph**:
+
 - Python ENABLES Migration Engineering
 - Migration Engineering IMPLEMENTED_IN Migration Tool
 - Migration Tool DEMONSTRATES Migration Engineering
@@ -265,6 +282,7 @@ The system doesn't just extract keywords—it reasons about context:
 ### 3. Multi-View Rendering
 
 The same JSON graph is rendered in 3 ways:
+
 - **Network**: Force-directed layout (streamlit-agraph)
 - **Flow**: Sankey diagram (Plotly)
 - **Matrix**: Heatmap (Plotly)
@@ -276,16 +294,19 @@ User switches views via sidebar radio button—**instant switching** (1 click, n
 ## 🧪 Example Use Cases
 
 ### For Job Seekers
+
 - **Portfolio enhancement**: Show interconnected skills
 - **Interview preparation**: Visualize your expertise domains
 - **Gap analysis**: Identify under-connected skills
 
 ### For Recruiters
+
 - **Quick assessment**: 30-second skill scan (Matrix view)
 - **Depth evaluation**: Explore project connections (Network view)
 - **Story telling**: See candidate's journey (Flow view)
 
 ### For Career Counselors
+
 - **Career path visualization**: Show non-linear trajectories
 - **Skill planning**: Identify development opportunities
 - **Portfolio building**: Help clients present themselves better
@@ -297,6 +318,7 @@ User switches views via sidebar radio button—**instant switching** (1 click, n
 Contributions welcome! This project was built in 2 days with iterative feedback—there's room for improvement.
 
 **Ideas for contribution**:
+
 - [ ] Export formats (GraphML, Neo4j cypher, JSON-LD)
 - [ ] Comparison mode (two CVs side-by-side)
 - [ ] Temporal dimension (career evolution over time)
@@ -305,6 +327,7 @@ Contributions welcome! This project was built in 2 days with iterative feedback�
 - [ ] Multi-language support (currently English only)
 
 **To contribute**:
+
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Commit your changes (`git commit -m 'Add amazing feature'`)
@@ -346,7 +369,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🙏 Acknowledgments
 
 - **Google AI Studio**: Invaluable for prompt engineering & iteration
-- **Gemini Flash 2.0**: Fast, accurate multimodal analysis
+- **Gemini Flash Preview 3.0**: Fast, accurate multimodal analysis
 - **Streamlit Community**: Excellent framework for rapid prototyping
 - **vis.js**: Powerful force-directed graph visualization
 - **Dev.to Challenge**: Motivation to build and ship in 2 days
@@ -365,19 +388,23 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🐛 Known Limitations
 
 ### Canvas Size
+
 - Network Graph uses fixed 1400×900px canvas (streamlit-agraph limitation)
 - Works great on desktop (1440px+), less optimal in narrow iframes
 - **Mitigation**: Collapsible sidebar adds ~250px when needed
 
 ### PDF Support Only
+
 - Currently supports PDF input only
 - DOCX support planned for future versions
 
 ### Single Language
+
 - Interface in English only
 - Internationalization planned
 
 ### No Persistence
+
 - Graphs are session-only (not saved server-side)
 - Export functionality planned
 
