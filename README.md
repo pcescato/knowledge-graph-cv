@@ -8,7 +8,7 @@
 
 Professional journeys aren't timelines—they're networks of interconnected skills, projects, and expertise. This tool uses AI to extract and visualize those connections.
 
-🔗 **[Try it live](https://knowledge-graph-cv-837592265234.europe-west1.run.app)** | 📝 **[Read the story on Dev.to](#)**
+🔗 **[Try it live](https://knowledge-graph-cv-837592265234.europe-west1.run.app)** | 📝 **[Read the story on Dev.to](https://dev.to/pascal_cescato_692b7a8a20/beyond-the-linear-cv-3fik)**
 
 ---
 
