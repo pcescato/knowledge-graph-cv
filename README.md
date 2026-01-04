@@ -284,8 +284,11 @@ The system doesn't just extract keywords—it reasons about context:
 The same JSON graph is rendered in 3 ways:
 
 - **Network**: Force-directed layout (streamlit-agraph)
+![Network](https://github.com/pcescato/knowledge-graph-cv/blob/main/images/graph-diagram.png)
 - **Flow**: Sankey diagram (Plotly)
+![Flow](https://github.com/pcescato/knowledge-graph-cv/blob/main/images/flow-diagram.png)
 - **Matrix**: Heatmap (Plotly)
+![Matrix](https://github.com/pcescato/knowledge-graph-cv/blob/main/images/skills-matrix.png)
 
 User switches views via sidebar radio button—**instant switching** (1 click, no reload).
 
