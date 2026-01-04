@@ -359,9 +359,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Pascal Cescato**
 
-- 🌐 Website: [pascalcescato.com](https://pascalcescato.com)
+- 🌐 Website: [https://benchwiseunderflow.in/](https://benchwiseunderflow.in/)
 - 💼 LinkedIn: [linkedin.com/in/pascalcescato](https://linkedin.com/in/pascalcescato)
-- 📝 Dev.to: [@pcescato](https://dev.to/pcescato)
+- 📝 Dev.to: [@pcescato](https://dev.to/pascal_cescato_692b7a8a20)
 - 🐙 GitHub: [@pcescato](https://github.com/pcescato)
 
 ---
