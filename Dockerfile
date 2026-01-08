@@ -16,4 +16,14 @@ RUN uv pip install --system -e .
 EXPOSE 8080
 
 # Cloud Run fournit $PORT
-CMD ["sh", "-c", "streamlit run app.py --server.port=$PORT --server.address=0.0.0.0"]
+CMD ["sh", "-c", "\
+    streamlit run app.py \
+      --server.port=$PORT \
+      --server.address=0.0.0.0 \
+      --server.headless=true \
+      --server.runOnSave=false \
+      --server.websocketPingTimeout=20 \
+      --server.websocketPingInterval=10 \
+      --server.maxUploadSize=5 \
+      --server.enableWebsocketCompression=false \
+"]
