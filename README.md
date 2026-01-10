@@ -1,7 +1,7 @@
 # 🕸️ AI Knowledge Graph CV Builder
 
 [![Live Demo](https://img.shields.io/badge/Demo-Live-brightgreen)](https://knowledge-graph-cv-837592265234.europe-west1.run.app)
-[![Dev.to Article](https://img.shields.io/badge/Article-Dev.to-black)](https://dev.to)
+[![Dev.to Article](https://img.shields.io/badge/Article-Dev.to-black)](https://dev.to/pascal_cescato_692b7a8a20/beyond-the-linear-cv-3fik)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 **Transform your resume into an interactive knowledge graph powered by Gemini AI.**

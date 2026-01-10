@@ -1,24 +1,31 @@
 FROM python:3.11-slim
+
 WORKDIR /app
 
-# uv pour installation rapide
+# Install Caddy (single binary, super lightweight)
+RUN apt-get update && \
+    apt-get install -y curl && \
+    curl -o /usr/bin/caddy -L "https://caddyserver.com/api/download?os=linux&arch=amd64" && \
+    chmod +x /usr/bin/caddy && \
+    apt-get remove -y curl && \
+    apt-get autoremove -y && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
-# Copie des métadonnées & code
+# Copy project files
 COPY pyproject.toml .
 COPY . .
 
-# Installation
+# Install Python dependencies
 RUN uv pip install --system -e .
 
-# Port Cloud Run
+# Copy Caddy config and start script
+COPY Caddyfile /app/Caddyfile
+COPY start.sh /app/start.sh
+RUN chmod +x /app/start.sh
+
 EXPOSE 8080
 
-# Commande Streamlit (OPTIONS VALIDES UNIQUEMENT)
-CMD streamlit run app.py \
-    --server.port=$PORT \
-    --server.address=0.0.0.0 \
-    --server.headless=true \
-    --server.runOnSave=false \
-    --server.enableCORS=false \
-    --server.enableXsrfProtection=false
+CMD ["/app/start.sh"]

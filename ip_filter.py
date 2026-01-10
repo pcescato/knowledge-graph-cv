@@ -29,32 +29,38 @@ def get_client_ip():
 
 def check_access():
     """Filtre d'accès : Bloque les bots + rate limiting"""
+    
+    # INITIALISATION CRITIQUE : 
+    # On s'assure que l'objet existe AVANT toute manipulation
+    if 'ip_requests' not in st.session_state:
+        st.session_state['ip_requests'] = defaultdict(list)
+    
     client_ip = get_client_ip()
     
     # 1. BLOCAGE TOTAL des bots identifiés
     if client_ip in BLOCKED_IPS:
-        st.error("🚫 **Accès refusé**")
-        st.info("Votre IP a été identifiée comme bot automatisé.")
-        st.caption(f"IP: {client_ip}")
+        st.error(f"🚫 **Access Denied**")
+        st.warning(f"IP {client_ip} has been flagged for aggressive behavior.")
         st.stop()
     
-    # 2. RATE LIMITING pour les autres (15 requêtes / 5 minutes)
+    # 2. RATE LIMITING
     now = datetime.now()
     cutoff = now - timedelta(minutes=5)
     
+    # On récupère la liste ou une liste vide si l'IP n'existe pas encore
+    requests_list = st.session_state['ip_requests'].get(client_ip, [])
+    
     # Nettoie les anciennes requêtes
-    st.session_state.ip_requests[client_ip] = [
-        t for t in st.session_state.ip_requests[client_ip] if t > cutoff
+    st.session_state['ip_requests'][client_ip] = [
+        t for t in requests_list if t > cutoff
     ]
     
     # Vérifie la limite
-    if len(st.session_state.ip_requests[client_ip]) >= 15:
-        st.warning("⚠️ **Trop de requêtes**")
-        st.info("Limite : 15 requêtes par 5 minutes. Patientez un instant.")
-        st.caption(f"IP: {client_ip}")
+    if len(st.session_state['ip_requests'][client_ip]) >= 15:
+        st.warning("⚠️ **Too many requests**")
         st.stop()
     
     # Enregistre cette requête
-    st.session_state.ip_requests[client_ip].append(now)
+    st.session_state['ip_requests'][client_ip].append(now)
     
     return client_ip

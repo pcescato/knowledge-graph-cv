@@ -1,0 +1,36 @@
+{
+    admin off
+    auto_https off
+    servers {
+        trusted_proxies static 169.254.0.0/16
+    }
+}
+
+:8080 {
+    # Matcher groupé pour toutes les IPs bannies
+    @denylist {
+        header X-Forwarded-For *185.136.92.*
+        header X-Forwarded-For *119.111.248.*
+        header X-Forwarded-For *2601:600:cb80:*
+        header X-Forwarded-For *57.151.128.*
+        header X-Forwarded-For *2402:3a80:*
+    }
+
+    # On répond 403 à n'importe lequel de ces matches
+    handle @denylist {
+        respond "Access Denied" 403
+    }
+
+    # Le reste vers Streamlit
+    handle {
+        reverse_proxy localhost:8501 {
+            header_up X-Real-IP {http.request.header.X-Forwarded-For}
+            header_up X-Forwarded-For {http.request.header.X-Forwarded-For}
+        }
+    }
+
+    log {
+        output stdout
+        format console
+    }
+}
