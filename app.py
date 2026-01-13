@@ -847,11 +847,11 @@ with st.sidebar:
         st.divider()
     
     # Barre de recherche (nouveauté V6)
-    st.subheader("🔎 Recherche de Nœud")
+    st.subheader("🔎 Node search")
     search_query = st.text_input(
         "Nom du nœud",
         placeholder="Ex: PHP, Python, wp2md...",
-        help="Recherche case-insensitive dans les labels",
+        help="Case-insensitive search in labels",
         key="node_search"
     )
     
@@ -862,7 +862,7 @@ with st.sidebar:
         ]
         
         if matching_nodes:
-            st.success(f"✅ {len(matching_nodes)} nœud(s) trouvé(s)")
+            st.success(f"✅ {len(matching_nodes)} node(s) found")
             
             for node in matching_nodes:
                 # Badge avec type et importance
@@ -872,9 +872,9 @@ with st.sidebar:
                 col1, col2 = st.columns([3, 1])
                 with col1:
                     st.write(f"**{node['label']}**")
-                    st.caption(f"{badge} • {connections_count} connexions")
+                    st.caption(f"{badge} • {connections_count} connections")
                 with col2:
-                    if st.button("📍", key=f"focus_{node['id']}", help="Focus sur ce nœud"):
+                    if st.button("📍", key=f"focus_{node['id']}", help="Focus on this node"):
                         st.session_state.focused_node = node['id']
                         st.rerun()
             
@@ -884,7 +884,7 @@ with st.sidebar:
         else:
             st.warning("❌ no matching nodes")
     else:
-        st.caption("💡 type a name to search un nœud spécifique")
+        st.caption("💡 type a name to search a specific node")
     
     st.divider()
     
@@ -1123,13 +1123,13 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
                 if st.session_state.focused_node:
                     st.success("✨ focus mode active ! grayed nodes are not directly connected. click 'reset focus' to return.")
                 else:
-                    st.success("✨ graph ready! ! click un nœud to activate focus mode.")
+                    st.success("✨ graph ready! ! click a node to activate focus mode.")
                 
                 # Info box
                 with st.expander("💡 how to use this graph?"):
                     st.markdown("""
-                    - **click un nœud** to activate focus mode (met en arrière-plan tout ce qui n'est pas connecté)
-                    - **reset focus** to return à la vue complète
+                    - **click a node** to activate focus mode (puts everything that is not connected in the background)
+                    - **reset focus** to return to the full view
                     - **zoom/pan** the graph with your mouse
                     - **filter** categories in the sidebar
                     - Les **nodes plus gros** are more important
@@ -1168,17 +1168,17 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
                                 st.markdown(f"**Importance** : {node_info.get('importance', '?')}/10")
                             with col3:
                                 total_connections = len(incoming) + len(outgoing)
-                                st.markdown(f"**Connexions** : {total_connections}")
+                                st.markdown(f"**Connections** : {total_connections}")
                             
                             if incoming:
-                                st.markdown("**⬅️ relationships entrantes** :")
+                                st.markdown("**⬅️ incoming relationships** :")
                                 for e in incoming:
                                     from_node = next((n for n in data['nodes'] if n['id'] == e['from']), None)
                                     if from_node:
                                         st.markdown(f"- {from_node['label']} **{e.get('label', '→')}** {node_info['label']}")
                             
                             if outgoing:
-                                st.markdown("**➡️ relationships sortantes** :")
+                                st.markdown("**➡️ outgoing relationships** :")
                                 for e in outgoing:
                                     to_node = next((n for n in data['nodes'] if n['id'] == e['to']), None)
                                     if to_node:
@@ -1192,7 +1192,7 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
                     st.markdown("""
                     - **the bands** represent connections between entities
                     - **the width** indicates connection importance
-                    - **colors** correspond to types (Skills en bleu, Projects en vert, etc.)
+                    - **colors** correspond to types (Skills in blue, Projects in green, etc.)
                     - **hover over** elements to see details
                     - the flow generally goes from **left to right** : Skills → Projects → Concepts
                     """)
@@ -1270,7 +1270,7 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
                             avg_skills_per_project = sum(skill_usage.values()) / len(projects) if projects else 0
                             st.info(f"📈 **average** : {avg_skills_per_project:.1f} skills per project")
                 else:
-                    st.warning("⚠️ not enough data to generate matrix. Assurez-vous d'avoir des Skills et Projects dans les filters.")
+                    st.warning("⚠️ not enough data to generate matrix. Make sure you have Skills and Projects in filters.")
 
         except Exception as e:
             st.error(f"❌ display error : {e}")
