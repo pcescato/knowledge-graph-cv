@@ -720,9 +720,9 @@ with st.sidebar:
     if gemini_model != st.session_state.gemini_model:
         st.session_state.gemini_model = gemini_model
         st.session_state.graph_data = None  # Reset pour forcer nouvelle analyse
-        st.info("💡 Modèle changé. Uploadez à nouveau votre CV pour réanalyser.")
+        st.info("💡 Model changed. Upload your CV again for re-analysis.")
     
-    st.caption("💡 Pro recommandé pour graphes plus précis (relationships technologiques)")
+    st.caption("💡 Pro Recommended for more precise graphs (technological relationships)")
     
     st.divider()
     
@@ -758,7 +758,7 @@ with st.sidebar:
     debug_mode = st.checkbox(
         "🔍 Mode Debug", 
         value=False,
-        help="Affiche les données brutes extraites par Gemini"
+        help="Displays the raw data extracted by Gemini"
     )
     
     st.divider()
@@ -794,7 +794,7 @@ with st.sidebar:
         st.metric(
             "density", 
             f"{density:.1f}",
-            help="Nombre moyen de relationships par nœud. a dense graph has > 1.5"
+            help="Average number of relationships per node. A dense graph has > 1.5"
         )
         
         # Indicateur visuel de qualité
@@ -811,9 +811,9 @@ with st.sidebar:
     if debug_mode:
         st.subheader("🔍 debug info")
         
-        with st.expander("📊 statistics Détaillées", expanded=True):
-            st.write(f"**nodes totaux extraits** : {len(sidebar_data['nodes'])}")
-            st.write(f"**relationships totales extraites** : {len(sidebar_data['edges'])}")
+        with st.expander("📊 Detailed statistics", expanded=True):
+            st.write(f"**Total extracted nodes** : {len(sidebar_data['nodes'])}")
+            st.write(f"**Total extracted relationships ** : {len(sidebar_data['edges'])}")
             
             # distribution by type
             node_types = {}
@@ -825,7 +825,7 @@ with st.sidebar:
             for node_type, count in sorted(node_types.items()):
                 st.write(f"  - {node_type}: {count}")
         
-        with st.expander("📋 Liste Complète des nodes", expanded=False):
+        with st.expander("📋 Complete list of nodes", expanded=False):
             for node in sorted(sidebar_data['nodes'], key=lambda x: x.get('importance', 0), reverse=True):
                 st.write(f"**{node['label']}** ({node['type']}) - Importance: {node.get('importance', '?')}/10")
                 st.write(f"  ID: `{node['id']}`")
@@ -834,14 +834,14 @@ with st.sidebar:
                 st.write(f"  Connexions: {connections}")
                 st.caption("")  # Espacement
         
-        with st.expander("🔗 Liste Complète des relationships", expanded=False):
+        with st.expander("🔗 Complete list of relationships", expanded=False):
             for edge in sidebar_data['edges']:
                 from_node = next((n for n in sidebar_data['nodes'] if n['id'] == edge['from']), None)
                 to_node = next((n for n in sidebar_data['nodes'] if n['id'] == edge['to']), None)
                 if from_node and to_node:
                     st.write(f"{from_node['label']} **{edge.get('label', '→')}** {to_node['label']}")
         
-        with st.expander("💻 JSON Brut", expanded=False):
+        with st.expander("💻 Raw JSON", expanded=False):
             st.json(sidebar_data)
         
         st.divider()
@@ -849,7 +849,7 @@ with st.sidebar:
     # Barre de recherche (nouveauté V6)
     st.subheader("🔎 Node search")
     search_query = st.text_input(
-        "Nom du nœud",
+        "Node name",
         placeholder="Ex: PHP, Python, wp2md...",
         help="Case-insensitive search in labels",
         key="node_search"
