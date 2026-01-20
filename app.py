@@ -998,10 +998,6 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
         data = st.session_state.graph_data
 
         try:
-            # --- 1. DÉFINITION DE LA CONFIGURATION ---
-            config = Config(
-
-            
 
             # --- 1. DÉFINITION DE LA CONFIGURATION (après récupération des paramètres) ---
             # Récupérer les paramètres d'espacement
