@@ -636,7 +636,7 @@ st.markdown("""
 # Quick Start instructions
 
 # Safety: ensure uploaded_file is defined before first use to avoid NameError
-uploaded_file = None
+
 
 # Prepare a safe data object for the sidebar (may be empty when no graph yet)
 sidebar_data = st.session_state.graph_data if st.session_state.graph_data is not None else { 'nodes': [], 'edges': [] }
@@ -888,8 +888,7 @@ with st.sidebar:
     
     st.divider()
     
-    st.divider()
-    
+
     # Légende des couleurs
     st.subheader("🎨 legend")
     color_map = {
@@ -1001,32 +1000,6 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
         try:
             # --- 1. DÉFINITION DE LA CONFIGURATION ---
             config = Config(
-                width=1400,
-                height=900,
-                directed=True,
-                physics=True,
-                nodeHighlightBehavior=True,
-                highlightColor="#FFD700",
-                collapsible=True,
-                physicsOptions={
-                    "barnesHut": {
-                        "gravitationalConstant": -8000,  # Force de répulsion très élevée
-                        "centralGravity": 0.1,           # Faible gravité centrale
-                        "springLength": 250,             # Longueur des "ressorts" entre nodes
-                        "springConstant": 0.02,          # Rigidité des ressorts
-                        "damping": 0.5,                  # Amortissement du mouvement
-                        "avoidOverlap": 1                # Évite les chevauchements
-                    },
-                    "solver": "barnesHut",               # Meilleur pour les graphes denses
-                    "stabilization": {
-                        "enabled": True,
-                        "iterations": 500,               # Plus d'itérations pour convergence
-                        "updateInterval": 25,
-                        "fit": True
-                    },
-                    "minVelocity": 0.75                  # Vitesse minimale avant arrêt
-                }
-            )
 
             
 
@@ -1083,9 +1056,7 @@ Do not artificially limit yourself to "top N" items - extract everything relevan
                     node_color = "#E0E0E0"
                     node_size = node_size * 0.6
                     opacity = 0.3
-                else:
-                    opacity = 1.0
-                
+
                 nodes.append(Node(
                     id=n['id'], 
                     label=n['label'], 
